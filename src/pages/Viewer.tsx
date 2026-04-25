@@ -82,6 +82,12 @@ export default function Viewer() {
       .maybeSingle()
       .then(({ data }) => {
         setResource(data as Resource | null);
+        
+        // Track view (Task 1 - Analytics)
+        if (data) {
+          supabase.from("resource_views").insert({ resource_id: data.id }).then();
+        }
+
         // Check if student has prior progress
         const prog = getProgress();
         if (prog && prog.lastPage > 1) {

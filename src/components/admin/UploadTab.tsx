@@ -12,7 +12,8 @@ import { Switch } from "@/components/ui/switch";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import { UploadCloud, FileText, Trash2, Loader2, CheckCircle2, Copy, Plus } from "lucide-react";
+import { UploadCloud, FileText, Trash2, Loader2, CheckCircle2, Copy, Plus, Download } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import { colorOptions } from "@/lib/colorMap";
 import type { Subject } from "@/types";
@@ -45,6 +46,29 @@ export default function UploadTab({ subjects, onDone }: Props) {
     setFile(f);
     if (!title) setTitle(f.name.replace(/\.pdf$/i, ""));
     setSuccess(null);
+  };
+
+  const downloadQR = () => {
+    const svg = document.getElementById("qr-code-svg");
+    if (!svg) return;
+    
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+    
+    img.onload = () => {
+      canvas.width = 600;
+      canvas.height = 600;
+      ctx?.drawImage(img, 0, 0, 600, 600);
+      const pngFile = canvas.toDataURL("image/png");
+      const downloadLink = document.createElement("a");
+      downloadLink.download = `QR_${success?.title.replace(/\s+/g, "_")}.png`;
+      downloadLink.href = pngFile;
+      downloadLink.click();
+    };
+    
+    img.src = "data:image/svg+xml;base64," + btoa(svgData);
   };
 
   const createSubject = async (): Promise<void> => {
@@ -182,17 +206,53 @@ export default function UploadTab({ subjects, onDone }: Props) {
       )}
 
       {success && (
-        <Card className="p-5 bg-success/10 border-success/30 animate-scale-in">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-success text-success-foreground flex items-center justify-center"><CheckCircle2 className="w-6 h-6" /></div>
-            <div className="flex-1 min-w-0">
-              <div className="font-heading font-semibold text-foreground">Published!</div>
-              <div className="text-sm text-muted-foreground truncate">"{success.title}" is now live.</div>
+        <Card className="p-6 bg-success/5 border-success/20 animate-scale-in space-y-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-full bg-success text-success-foreground flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-7 h-7" />
+            </div>
+            <div className="flex-1 min-w-0 pt-1">
+              <div className="font-heading font-bold text-xl text-foreground">Successfully Published!</div>
+              <p className="text-muted-foreground italic">"{success.title}"</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 bg-card rounded-input border border-border p-2">
-            <code className="flex-1 text-xs text-muted-foreground truncate px-2">{success.link}</code>
-            <Button size="sm" onClick={async () => { await navigator.clipboard.writeText(success.link); toast.success("Link copied!"); }}><Copy className="w-3.5 h-3.5 mr-1" /> Copy Link</Button>
+
+          <div className="flex flex-col md:flex-row items-center gap-8 py-2">
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 group relative">
+              <QRCodeSVG
+                id="qr-code-svg"
+                value={success.link}
+                size={160}
+                level="H"
+                fgColor="#6366f1"
+                includeMargin={false}
+              />
+              <div className="absolute inset-0 bg-indigo-600/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl pointer-events-none" />
+            </div>
+            
+            <div className="flex-1 space-y-4 w-full">
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Student Access Link</Label>
+                <div className="flex items-center gap-2 bg-card rounded-xl border border-border p-2 shadow-inner">
+                  <code className="flex-1 text-xs font-mono text-muted-foreground truncate px-2">{success.link}</code>
+                  <Button variant="secondary" size="sm" className="shrink-0" onClick={async () => { 
+                    await navigator.clipboard.writeText(success.link); 
+                    toast.success("Link copied!"); 
+                  }}>
+                    <Copy className="w-3.5 h-3.5 mr-2" /> Copy
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Button variant="outline" className="flex-1" onClick={downloadQR}>
+                  <Download className="w-4 h-4 mr-2" /> Download QR
+                </Button>
+                <Button className="flex-1" onClick={() => { setSuccess(null); setFile(null); setTitle(""); }}>
+                  Done
+                </Button>
+              </div>
+            </div>
           </div>
         </Card>
       )}

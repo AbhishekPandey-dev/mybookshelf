@@ -1,196 +1,316 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { 
+  BarChart3, 
+  FileText, 
+  Eye, 
+  BookOpen, 
+  TrendingUp, 
+  Calendar,
+  ChevronUp,
+  ChevronDown,
+  Search
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart3, FileText, Eye, Layers, Clock } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 
-type ResourceView = {
-  resource_id: string;
-  viewed_at: string;
-};
-
-type Resource = {
+interface ResourceStat {
   id: string;
   title: string;
-  subject_id: string;
-  subjects: { name: string } | null;
-};
-
-type AnalyticsData = {
-  resource: Resource;
-  viewCount: number;
+  subject: string;
+  views: number;
   lastViewed: string | null;
-};
+}
 
-export default function AnalyticsTab() {
-  const [data, setData] = useState<AnalyticsData[]>([]);
-  const [totals, setTotals] = useState({ pdfs: 0, views: 0, subjects: 0 });
+const AnalyticsTab = () => {
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalPdfs: 0,
+    totalViews: 0,
+    totalSubjects: 0
+  });
+  const [topResources, setTopResources] = useState<ResourceStat[]>([]);
+  const [allResources, setAllResources] = useState<ResourceStat[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortConfig, setSortConfig] = useState<{ key: keyof ResourceStat; direction: 'asc' | 'desc' }>({
+    key: 'views',
+    direction: 'desc'
+  });
 
   useEffect(() => {
-    (async () => {
-      const [
-        { data: resources },
-        { data: views },
-        { count: subjectsCount }
-      ] = await Promise.all([
-        supabase.from("resources").select("id, title, subject_id, subjects(name)"),
-        supabase.from("resource_views").select("resource_id, viewed_at"),
-        supabase.from("subjects").select("*", { count: "exact", head: true })
-      ]);
-
-      const resList = (resources as Resource[]) || [];
-      const viewList = (views as ResourceView[]) || [];
-
-      const viewMap = new Map<string, { count: number; lastViewed: string | null }>();
-      
-      viewList.forEach((v) => {
-        const current = viewMap.get(v.resource_id) || { count: 0, lastViewed: null };
-        current.count += 1;
-        if (!current.lastViewed || new Date(v.viewed_at) > new Date(current.lastViewed)) {
-          current.lastViewed = v.viewed_at;
-        }
-        viewMap.set(v.resource_id, current);
-      });
-
-      const analyticsData: AnalyticsData[] = resList.map((r) => {
-        const stats = viewMap.get(r.id) || { count: 0, lastViewed: null };
-        return {
-          resource: r,
-          viewCount: stats.count,
-          lastViewed: stats.lastViewed,
-        };
-      });
-
-      analyticsData.sort((a, b) => b.viewCount - a.viewCount);
-
-      setData(analyticsData);
-      setTotals({
-        pdfs: resList.length,
-        views: viewList.length,
-        subjects: subjectsCount || 0,
-      });
-      setLoading(false);
-    })();
+    fetchAnalytics();
   }, []);
+
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true);
+      
+      const { data: resources, error: resError } = await supabase
+        .from('resources')
+        .select('id, title, subject_id, subjects(name)');
+      
+      if (resError) throw resError;
+
+      const { data: views, error: viewsError } = await supabase
+        .from('resource_views')
+        .select('resource_id, viewed_at')
+        .order('viewed_at', { ascending: false });
+
+      if (viewsError) throw viewsError;
+
+      const subjects = new Set(resources?.map(r => r.subjects?.name).filter(Boolean));
+      const viewCounts: Record<string, { count: number; lastViewed: string | null }> = {};
+      
+      views?.forEach(v => {
+        if (!viewCounts[v.resource_id]) {
+          viewCounts[v.resource_id] = { count: 0, lastViewed: v.viewed_at };
+        }
+        viewCounts[v.resource_id].count++;
+      });
+
+      const processedResources: ResourceStat[] = (resources || []).map(r => ({
+        id: r.id,
+        title: r.title,
+        subject: r.subjects?.name || "Unknown",
+        views: viewCounts[r.id]?.count || 0,
+        lastViewed: viewCounts[r.id]?.lastViewed || null
+      }));
+
+      setStats({
+        totalPdfs: resources?.length || 0,
+        totalViews: views?.length || 0,
+        totalSubjects: subjects.size
+      });
+
+      const sorted = [...processedResources].sort((a, b) => b.views - a.views);
+      setTopResources(sorted.slice(0, 3));
+      setAllResources(processedResources);
+      
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSort = (key: keyof ResourceStat) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc'
+    }));
+  };
+
+  const sortedAndFilteredResources = allResources
+    .filter(r => 
+      r.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      r.subject.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
+      
+      if (aValue === null) return 1;
+      if (bValue === null) return -1;
+      
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortConfig.direction === 'asc' 
+          ? aValue.localeCompare(bValue) 
+          : bValue.localeCompare(aValue);
+      }
+      
+      return sortConfig.direction === 'asc' 
+        ? (aValue as number) - (bValue as number)
+        : (bValue as number) - (aValue as number);
+    });
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Skeleton className="h-24 rounded-card" />
-          <Skeleton className="h-24 rounded-card" />
-          <Skeleton className="h-24 rounded-card" />
+      <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[1, 2, 3].map(i => (
+            <Card key={i} className="border-none bg-white/50 backdrop-blur-sm shadow-sm">
+              <CardHeader className="pb-2">
+                <Skeleton className="h-4 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16" />
+              </CardContent>
+            </Card>
+          ))}
         </div>
-        <Skeleton className="h-[400px] rounded-card" />
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-48" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[1, 2, 3].map(i => <Skeleton key={i} className="h-32 rounded-xl" />)}
+          </div>
+        </div>
       </div>
     );
   }
 
-  const top3 = data.slice(0, 3);
-
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-6 flex items-center gap-4 dark:bg-gray-900 dark:border-gray-800">
-          <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-            <Eye className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground font-medium">Total Views</p>
-            <p className="text-3xl font-heading font-bold dark:text-gray-100">{totals.views}</p>
-          </div>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="border-none bg-white/60 backdrop-blur-md shadow-sm hover:shadow-md transition-all group">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total PDFs</CardTitle>
+            <div className="p-2 bg-blue-50 rounded-lg text-blue-600 group-hover:scale-110 transition-transform">
+              <FileText className="w-4 h-4" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalPdfs}</div>
+            <p className="text-xs text-muted-foreground mt-1">Uploaded resources</p>
+          </CardContent>
         </Card>
-        <Card className="p-6 flex items-center gap-4 dark:bg-gray-900 dark:border-gray-800">
-          <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-            <FileText className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground font-medium">Total PDFs</p>
-            <p className="text-3xl font-heading font-bold dark:text-gray-100">{totals.pdfs}</p>
-          </div>
+
+        <Card className="border-none bg-white/60 backdrop-blur-md shadow-sm hover:shadow-md transition-all group">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Views</CardTitle>
+            <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600 group-hover:scale-110 transition-transform">
+              <Eye className="w-4 h-4" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalViews}</div>
+            <p className="text-xs text-muted-foreground mt-1">Student engagements</p>
+          </CardContent>
         </Card>
-        <Card className="p-6 flex items-center gap-4 dark:bg-gray-900 dark:border-gray-800">
-          <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-600 dark:text-amber-400">
-            <Layers className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground font-medium">Total Subjects</p>
-            <p className="text-3xl font-heading font-bold dark:text-gray-100">{totals.subjects}</p>
-          </div>
+
+        <Card className="border-none bg-white/60 backdrop-blur-md shadow-sm hover:shadow-md transition-all group">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Subjects</CardTitle>
+            <div className="p-2 bg-violet-50 rounded-lg text-violet-600 group-hover:scale-110 transition-transform">
+              <BookOpen className="w-4 h-4" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalSubjects}</div>
+            <p className="text-xs text-muted-foreground mt-1">Categories covered</p>
+          </CardContent>
         </Card>
       </div>
 
-      {top3.length > 0 && top3[0].viewCount > 0 && (
-        <div className="space-y-4">
-          <h3 className="font-heading font-semibold flex items-center gap-2 dark:text-gray-100">
-            <BarChart3 className="w-5 h-5 text-indigo-500" />
-            Top Resources
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {top3.map((d, i) => d.viewCount > 0 && (
-              <Card key={d.resource.id} className="p-5 flex flex-col justify-between dark:bg-gray-900 dark:border-gray-800 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-indigo-500/10 to-transparent dark:from-indigo-500/20 rounded-bl-full" />
-                <div>
-                  <div className="text-xs font-semibold text-indigo-500 mb-1">#{i + 1} Most Viewed</div>
-                  <h4 className="font-medium line-clamp-2 dark:text-gray-100">{d.resource.title}</h4>
-                  <p className="text-xs text-muted-foreground mt-1">{d.resource.subjects?.name}</p>
+      {/* Top Resources */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-indigo-600" />
+          <h2 className="text-lg font-semibold">Top 3 Most Viewed</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {topResources.map((resource, index) => (
+            <div 
+              key={resource.id}
+              className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 p-6 text-white shadow-lg shadow-indigo-200 group hover:scale-[1.02] transition-transform cursor-default"
+            >
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-colors" />
+              <Badge variant="outline" className="bg-white/20 border-white/30 text-white mb-3 hover:bg-white/30">
+                #{index + 1} Popular
+              </Badge>
+              <h3 className="font-bold text-lg leading-tight mb-2 line-clamp-2">{resource.title}</h3>
+              <p className="text-indigo-100 text-sm mb-4">{resource.subject}</p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-indigo-200" />
+                  <span className="font-semibold">{resource.views} views</span>
                 </div>
-                <div className="mt-4 flex items-center justify-between text-sm">
-                  <span className="font-semibold text-foreground dark:text-gray-200">{d.viewCount} views</span>
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {d.lastViewed ? new Date(d.lastViewed).toLocaleDateString() : "Never"}
-                  </span>
-                </div>
-              </Card>
-            ))}
+              </div>
+            </div>
+          ))}
+          {topResources.length === 0 && (
+            <div className="col-span-full py-12 text-center bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+              <Eye className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500">No view data available yet.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Full Stats Table */}
+      <div className="space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <h2 className="text-lg font-semibold">All Resources Statistics</h2>
+          <div className="relative w-full md:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search resources..." 
+              className="pl-10 bg-white/50 border-none shadow-sm focus-visible:ring-indigo-500"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
         </div>
-      )}
 
-      <div className="space-y-4">
-        <h3 className="font-heading font-semibold dark:text-gray-100">All Resources Performance</h3>
-        <Card className="overflow-hidden dark:bg-gray-900 dark:border-gray-800">
+        <div className="bg-white/60 backdrop-blur-md rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-muted-foreground uppercase bg-muted/50 dark:bg-gray-800/50">
-                <tr>
-                  <th className="px-6 py-3 font-medium">Resource Title</th>
-                  <th className="px-6 py-3 font-medium">Subject</th>
-                  <th className="px-6 py-3 font-medium text-right">Total Views</th>
-                  <th className="px-6 py-3 font-medium text-right">Last Viewed</th>
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-6 py-4 font-medium text-gray-500 cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleSort('title')}>
+                    <div className="flex items-center gap-2">
+                      Resource Title
+                      {sortConfig.key === 'title' && (sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 font-medium text-gray-500 cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleSort('subject')}>
+                    <div className="flex items-center gap-2">
+                      Subject
+                      {sortConfig.key === 'subject' && (sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 font-medium text-gray-500 cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleSort('views')}>
+                    <div className="flex items-center gap-2">
+                      Views
+                      {sortConfig.key === 'views' && (sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 font-medium text-gray-500 cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => handleSort('lastViewed')}>
+                    <div className="flex items-center gap-2">
+                      Last Viewed
+                      {sortConfig.key === 'lastViewed' && (sortConfig.direction === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                    </div>
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border dark:divide-gray-800">
-                {data.map((d) => (
-                  <tr key={d.resource.id} className="bg-white dark:bg-gray-900 hover:bg-muted/50 dark:hover:bg-gray-800/50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-foreground dark:text-gray-100 truncate max-w-[200px] md:max-w-[400px]">
-                      {d.resource.title}
+              <tbody className="divide-y divide-gray-100">
+                {sortedAndFilteredResources.map((resource) => (
+                  <tr key={resource.id} className="hover:bg-indigo-50/30 transition-colors group">
+                    <td className="px-6 py-4">
+                      <span className="font-medium text-gray-900">{resource.title}</span>
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
-                      {d.resource.subjects?.name}
+                    <td className="px-6 py-4">
+                      <Badge variant="secondary" className="bg-gray-100 text-gray-600 font-normal">{resource.subject}</Badge>
                     </td>
-                    <td className="px-6 py-4 text-right font-semibold text-foreground dark:text-gray-200">
-                      {d.viewCount}
+                    <td className="px-6 py-4 font-semibold text-gray-900">
+                      {resource.views.toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 text-right text-muted-foreground whitespace-nowrap">
-                      {d.lastViewed ? new Date(d.lastViewed).toLocaleDateString() : "-"}
+                    <td className="px-6 py-4 text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5" />
+                        {resource.lastViewed 
+                          ? new Date(resource.lastViewed).toLocaleDateString() + ' ' + new Date(resource.lastViewed).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                          : 'Never'
+                        }
+                      </div>
                     </td>
                   </tr>
                 ))}
-                {data.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
-                      No resources found.
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
-        </Card>
+          
+          {sortedAndFilteredResources.length === 0 && (
+            <div className="py-12 text-center">
+              <p className="text-muted-foreground">No resources found matching your search.</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
-}
+};
+
+export default AnalyticsTab;

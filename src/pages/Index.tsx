@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Search, BookOpen, X, Loader2, ArrowRight, Link2, Bookmark, Trash2 } from "lucide-react";
+import { Search, BookOpen, X, Loader2, ArrowRight, Link2, Bookmark, Trash2, ChevronRight, Download } from "lucide-react";
 import { getMeshGradient } from "@/utils/gradients";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -29,6 +29,7 @@ type SearchResult = {
   subject_id: string;
   content_type: string;
   grade_level: string | null;
+  cover_emoji: string | null;
   subjects: { name: string; icon: string; color: string } | null;
 };
 
@@ -68,6 +69,8 @@ export default function Index() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [bookmarksOpen, setBookmarksOpen] = useState(false);
   const { bookmarks, removeBookmark, clearAll } = useBookmarks();
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -100,7 +103,6 @@ export default function Index() {
       
       // Fetch unique grade levels
       const { data: grades } = await supabase.rpc('get_unique_grades');
-      // If RPC is missing, fallback to select distinct
       if (grades) {
         setGradeLevels(grades as string[]);
       } else {
@@ -114,6 +116,32 @@ export default function Index() {
   }, []);
 
   useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+      if (!localStorage.getItem("pwa_prompt_dismissed")) {
+        setShowInstallBanner(true);
+      }
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === "accepted") {
+      setShowInstallBanner(false);
+    }
+  };
+
+  const dismissInstall = () => {
+    setShowInstallBanner(false);
+    localStorage.setItem("pwa_prompt_dismissed", "true");
+  };
+
+  useEffect(() => {
     if (!search.trim() && selectedSubject === "all" && selectedGrade === "all" && selectedCategory === "all") { 
       setSearchResults([]); setSearching(false); return; 
     }
@@ -121,7 +149,7 @@ export default function Index() {
     const t = setTimeout(async () => {
       let query = supabase
         .from("resources")
-        .select("id, title, content_type, grade_level, subject_id, subjects(name, icon, color)");
+        .select("id, title, content_type, grade_level, cover_emoji, subject_id, subjects(name, icon, color)");
       
       if (search.trim()) {
         query = query.textSearch("fts", search.trim(), { config: "english", type: "websearch" });
@@ -200,7 +228,6 @@ export default function Index() {
 
               {/* Filters Area */}
               <div className="mt-6 space-y-4 shrink-0 px-1">
-                {/* Subjects */}
                 <div className="overflow-x-auto pb-1 -mx-2 px-2 flex items-center gap-2 no-scrollbar">
                   <button
                     onClick={() => setSelectedSubject("all")}
@@ -223,7 +250,6 @@ export default function Index() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-6 pt-2">
-                  {/* Format Pills */}
                   <div className="flex items-center gap-3">
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Format</span>
                     <div className="flex items-center gap-1.5">
@@ -240,7 +266,6 @@ export default function Index() {
                     </div>
                   </div>
 
-                  {/* Grade Pills */}
                   {gradeLevels.length > 0 && (
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Grade</span>
@@ -325,6 +350,7 @@ export default function Index() {
                     <p className="text-sm font-bold uppercase tracking-[0.3em] text-muted-foreground/30">Enter a keyword to explore</p>
                   </div>
                 )}
+              </div>
             </div>
           </div>
         </div>
@@ -341,13 +367,12 @@ export default function Index() {
       </section>
 
       <main className="container mx-auto px-4 pb-16 flex-1 space-y-12">
-        {/* ── Task 4: Recently Added ──────────────────────────────── */}
+        {/* Recently Added */}
         {!loading && recentResources.length > 0 && (
           <section className="animate-fade-in">
             <h2 className="font-heading font-bold text-lg text-foreground dark:text-gray-100 mb-4">
               Recently Added
             </h2>
-            {/* mobile: horizontal scroll; desktop: 4-col grid */}
             <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar md:grid md:grid-cols-4 md:overflow-visible">
               {recentResources.map((r, idx) => {
                 const subjectColor = r.subjects?.color ?? "indigo";
@@ -357,13 +382,10 @@ export default function Index() {
                     className="relative flex-shrink-0 w-52 md:w-auto bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 overflow-hidden animate-fade-in group"
                     style={{ animationDelay: `${idx * 60}ms` }}
                   >
-                    {/* Color strip */}
                     <div
-                      className={`h-2 w-full bg-${subjectColor}-500`}
-                      style={{ backgroundColor: subjectColor === "indigo" ? "#6366f1" : undefined }}
+                      className="h-2 w-full"
+                      style={{ backgroundColor: subjectColor === "indigo" ? "#6366f1" : subjectColor }}
                     />
-
-                    {/* Task 5: Share button — hover reveal */}
                     <button
                       onClick={(e) => { e.preventDefault(); copyShareLink(r.id); }}
                       className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/80 dark:bg-gray-800/80 backdrop-blur flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-white dark:hover:bg-gray-700"
@@ -371,7 +393,6 @@ export default function Index() {
                     >
                       <Link2 className="w-3.5 h-3.5 text-gray-500 dark:text-gray-300" />
                     </button>
-
                     <Link to={`/read/${r.id}`} className="block p-4">
                       <div className="font-semibold text-sm text-foreground dark:text-gray-100 line-clamp-2 mb-2 pr-6">
                         {r.title}
@@ -397,7 +418,7 @@ export default function Index() {
           </section>
         )}
 
-        {/* ── Subject cards grid ─────────────────────────────────────── */}
+        {/* Subject cards grid */}
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-5 max-w-5xl mx-auto">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -426,15 +447,12 @@ export default function Index() {
                     style={{ animationDelay: `${idx * 40}ms` }}
                     className="animate-fade-in group"
                   >
-                    <div className="rounded-2xl overflow-hidden border border-white/10 shadow-card transition-all duration-300 hover:-translate-y-2 hover:shadow-card-hover bg-white dark:bg-gray-900 group">
-                      {/* Mesh gradient area */}
+                    <div className="rounded-2xl overflow-hidden border border-white/10 shadow-card transition-all duration-300 hover:-translate-y-2 hover:shadow-card-hover bg-white dark:bg-gray-900">
                       <div
                         className="relative h-40 md:h-44 flex flex-col justify-between p-5 overflow-hidden"
-                        style={{ background: mesh, backgroundColor: "#4f46e5" }}
+                        style={{ background: mesh, backgroundColor: s.color === "indigo" ? "#4f46e5" : s.color }}
                       >
-                        {/* Decorative glow */}
                         <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/20 rounded-full blur-3xl" />
-                        
                         <div className="flex justify-center items-center flex-1 relative">
                           <span className="text-6xl md:text-7xl leading-none group-hover:scale-110 transition-transform duration-500"
                             style={{ filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.4))" }}>
@@ -450,7 +468,6 @@ export default function Index() {
                           </span>
                         </div>
                       </div>
-                      {/* Footer */}
                       <div className="px-5 py-4 flex items-center justify-between bg-white dark:bg-gray-900 border-t border-gray-50 dark:border-gray-800">
                         <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
                           {count === 0 ? "Coming Soon" : `Ready to read`}
@@ -475,7 +492,7 @@ export default function Index() {
         </div>
       </footer>
 
-      {/* ── Bookmarks Drawer ────────────────────────────────────────── */}
+      {/* Bookmarks Drawer */}
       <Sheet open={bookmarksOpen} onOpenChange={setBookmarksOpen}>
         <SheetContent className="w-full sm:max-w-md p-0 dark:bg-gray-900 dark:border-gray-800 flex flex-col z-[100]">
           <SheetHeader className="px-5 py-4 border-b border-border dark:border-gray-800 flex flex-row items-center justify-between">
@@ -512,6 +529,29 @@ export default function Index() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* PWA Install Banner */}
+      {showInstallBanner && (
+        <div className="fixed bottom-20 md:bottom-8 left-4 right-4 md:left-auto md:right-8 z-50 animate-in slide-in-from-bottom-8 duration-500">
+          <Card className="p-4 bg-indigo-600 text-white border-none shadow-2xl flex items-center gap-4 max-w-sm">
+            <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+              <BookOpen className="w-6 h-6" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-sm">Install MyBookshelf</div>
+              <p className="text-xs text-indigo-100">Add to home screen for faster access & offline reading.</p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Button size="sm" className="bg-white text-indigo-600 hover:bg-indigo-50 font-bold h-8 px-4" onClick={handleInstall}>
+                Install
+              </Button>
+              <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10 h-6 text-[10px]" onClick={dismissInstall}>
+                Maybe Later
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

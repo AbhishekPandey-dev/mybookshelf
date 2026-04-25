@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { GraduationCap, BookOpen, UploadCloud, Settings as SettingsIcon, LogOut, Loader2 } from "lucide-react";
+import { GraduationCap, BookOpen, UploadCloud, Settings as SettingsIcon, LogOut, Loader2, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import ContentTab from "@/components/admin/ContentTab";
@@ -16,7 +16,7 @@ type Tab = "content" | "upload" | "analytics" | "settings";
 const NAV_ITEMS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "content", label: "My Content", icon: BookOpen },
   { id: "upload", label: "Upload", icon: UploadCloud },
-  { id: "analytics", label: "Analytics", icon: BookOpen },
+  { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
 
