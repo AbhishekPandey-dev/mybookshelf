@@ -65,6 +65,8 @@ export type Database = {
           subject_id: string
           title: string
           unit_number: string | null
+          grade_level: string | null
+          ai_processed: boolean
         }
         Insert: {
           allow_download?: boolean
@@ -81,6 +83,8 @@ export type Database = {
           subject_id: string
           title: string
           unit_number?: string | null
+          grade_level?: string | null
+          ai_processed?: boolean
         }
         Update: {
           allow_download?: boolean
@@ -97,6 +101,8 @@ export type Database = {
           subject_id?: string
           title?: string
           unit_number?: string | null
+          grade_level?: string | null
+          ai_processed?: boolean
         }
         Relationships: [
           {
@@ -113,6 +119,32 @@ export type Database = {
             referencedRelation: "subjects"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      resource_views: {
+        Row: {
+          id: string
+          resource_id: string | null
+          viewed_at: string
+        }
+        Insert: {
+          id?: string
+          resource_id?: string | null
+          viewed_at?: string
+        }
+        Update: {
+          id?: string
+          resource_id?: string | null
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_views_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          }
         ]
       }
       subjects: {
@@ -198,6 +230,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_unique_grades: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

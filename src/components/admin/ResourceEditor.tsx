@@ -32,7 +32,7 @@ type FormState = {
   allow_download: boolean;
 };
 
-export default function EditResourceDialog({ resource, subjects, onClose, onSaved }: Props) {
+export default function ResourceEditor({ resource, subjects, onClose, onSaved }: Props) {
   const [form, setForm] = useState<FormState>({
     title: resource.title,
     description: resource.description ?? "",
@@ -73,18 +73,24 @@ export default function EditResourceDialog({ resource, subjects, onClose, onSave
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="font-heading">Edit Resource</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="space-y-4 py-2">
           <div className="space-y-1.5">
             <Label>Title</Label>
             <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           </div>
-          <div className="space-y-1.5">
-            <Label>Grade Level</Label>
-            <Input value={form.grade_level} onChange={(e) => setForm({ ...form, grade_level: e.target.value })} placeholder="e.g. Grade 10" />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Grade Level</Label>
+              <Input value={form.grade_level} onChange={(e) => setForm({ ...form, grade_level: e.target.value })} placeholder="e.g. Grade 10" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Emoji Icon</Label>
+              <Input value={form.cover_emoji} onChange={(e) => setForm({ ...form, cover_emoji: e.target.value })} />
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label>Subject</Label>
@@ -97,35 +103,39 @@ export default function EditResourceDialog({ resource, subjects, onClose, onSave
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5">
-            <Label>Content Type</Label>
-            <Select value={form.content_type} onValueChange={(v) => setForm({ ...form, content_type: v as FormState["content_type"] })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="full">Full Book</SelectItem>
-                <SelectItem value="unit">Unit</SelectItem>
-                <SelectItem value="part">Chapter / Part</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {form.content_type !== "full" && (
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label>Unit / Part Number</Label>
-              <Input value={form.unit_number} onChange={(e) => setForm({ ...form, unit_number: e.target.value })} />
+              <Label>Content Type</Label>
+              <Select value={form.content_type} onValueChange={(v) => setForm({ ...form, content_type: v as FormState["content_type"] })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="full">Full Book</SelectItem>
+                  <SelectItem value="unit">Unit</SelectItem>
+                  <SelectItem value="part">Chapter / Part</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          )}
+            {form.content_type !== "full" && (
+              <div className="space-y-1.5">
+                <Label>Unit/Part #</Label>
+                <Input value={form.unit_number} onChange={(e) => setForm({ ...form, unit_number: e.target.value })} />
+              </div>
+            )}
+          </div>
           <div className="space-y-1.5">
             <Label>Description</Label>
             <Textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </div>
-          <div className="flex items-center justify-between py-1">
-            <Label className="cursor-pointer">Allow download</Label>
+          <div className="flex items-center justify-between py-1 px-1 rounded-lg bg-muted/50">
+            <Label className="cursor-pointer text-sm">Allow student downloads</Label>
             <Switch checked={form.allow_download} onCheckedChange={(v) => setForm({ ...form, allow_download: v })} />
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={save} disabled={busy}>Save Changes</Button>
+          <Button onClick={save} disabled={busy} className="bg-indigo-600 hover:bg-indigo-700">
+            {busy ? "Saving..." : "Save Changes"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

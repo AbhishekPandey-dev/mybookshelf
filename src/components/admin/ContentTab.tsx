@@ -22,7 +22,9 @@ import {
 import { toast } from "sonner";
 import { getColor } from "@/lib/colorMap";
 import type { Subject, Resource, TeacherSettings } from "@/types";
-import EditResourceDialog from "./EditResourceDialog";
+import ResourceEditor from "@/components/admin/ResourceEditor";
+
+
 
 interface Props {
   subjects: Subject[];
@@ -301,7 +303,7 @@ export default function ContentTab({
       </div>
 
       {editing && (
-        <EditResourceDialog
+        <ResourceEditor
           resource={editing}
           subjects={subjects}
           onClose={() => setEditing(null)}

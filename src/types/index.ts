@@ -31,6 +31,7 @@ export interface Resource {
   cover_emoji: string | null;
   cover_color: string | null;
   grade_level: string | null;
+  ai_processed: boolean;
   created_at: string;
 }
 
