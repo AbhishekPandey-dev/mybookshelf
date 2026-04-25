@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,111 +10,84 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { mode, question, resourceId, pageNumber, language } = await req.json();
-    const isHindi = language === "hi";
-    
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const { question, resourceId } = await req.json();
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY missing");
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    let retrievedContext = "";
-    
-    if (mode === "ask" && question && resourceId) {
-      // 1. Embed the question
-      const embedRes = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
+    // 1. Generate embedding for the question
+    const embeddingResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${GEMINI_API_KEY}`,
+      {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          input: question,
-          model: "text-embedding-3-small"
+          model: "models/text-embedding-004",
+          content: { parts: [{ text: question }] }
         })
-      });
-
-      if (!embedRes.ok) throw new Error("Failed to embed question");
-      const embedData = await embedRes.json();
-      const query_embedding = embedData.data[0].embedding;
-
-      // 2. Vector search via RPC
-      const { data: chunks, error: rpcError } = await supabase.rpc("match_resource_chunks", {
-        query_embedding,
-        match_threshold: 0.1,
-        match_count: 5,
-        p_resource_id: resourceId
-      });
-
-      if (rpcError) throw rpcError;
-
-      // 3. Construct context
-      if (chunks && chunks.length > 0) {
-        retrievedContext = chunks.map((c: any) => `[Page ${c.page_number}]\n${c.content}`).join("\n\n");
       }
-    } else if (mode === "explain" && resourceId && pageNumber) {
-      // If explaining a specific page, just fetch chunks for that page
-      const { data: chunks, error } = await supabase
-        .from("resource_chunks")
-        .select("content, page_number")
-        .eq("resource_id", resourceId)
-        .eq("page_number", pageNumber)
-        .order("chunk_index");
-        
-      if (!error && chunks) {
-        retrievedContext = chunks.map(c => `[Page ${c.page_number}]\n${c.content}`).join("\n\n");
+    );
+
+    if (!embeddingResponse.ok) throw new Error("Question embedding failed");
+    const embeddingData = await embeddingResponse.json();
+    const embedding = embeddingData.embedding.values;
+
+    // 2. Match resource chunks
+    const { data: chunks, error: matchError } = await supabase.rpc("match_resource_chunks", {
+      query_embedding: embedding,
+      match_threshold: 0.5,
+      match_count: 5,
+      p_resource_id: resourceId
+    });
+
+    if (matchError) throw matchError;
+
+    const context = chunks?.map((c: any) => c.content).join("\n\n") || "No context found.";
+
+    // 3. Gemini Chat Completion
+    const chatResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `You are MyBookshelf AI, a friendly expert tutor. Use the following context to answer the student's question. 
+              If the answer isn't in the context, say you don't know based on the document but try to help generally.
+              Answer in the same language as the question (Hindi or English).
+              
+              Context:
+              ${context}
+              
+              Question: ${question}`
+            }]
+          }]
+        })
       }
+    );
+
+    if (chatResponse.status === 429) {
+      // Specific rate limit handling
+      const isHindi = /[\u0900-\u097F]/.test(question);
+      const msg = isHindi 
+        ? "Abhi bahut saare sawaal aa rahe hain. Thodi der baad dobara poochiye. 🙏"
+        : "Too many questions right now. Please try again in a moment. 🙏";
+      return new Response(JSON.stringify({ answer: msg }), { headers: corsHeaders });
     }
 
-    let systemPrompt = "";
-    let userPrompt = "";
+    if (!chatResponse.ok) throw new Error(`Gemini Chat failed: ${chatResponse.statusText}`);
 
-    if (mode === "explain") {
-      systemPrompt = isHindi
-        ? "Explain the following content in simple Hindi (Devanagari script) as if you are a teacher explaining to a student. Use easy language suitable for school or college students. Base your answer only on the provided PDF content. Show a chunk.page_number reference below each AI answer as '📄 Page X'"
-        : "You are a friendly teacher explaining content to a school/college student. Use simple, clear language. Keep explanations concise but thorough. Use short paragraphs. Base your answer only on the provided PDF content. Show a chunk.page_number reference below each AI answer as '📄 Page X'";
-      userPrompt = `Explain the following context from page ${pageNumber}:\n\n${retrievedContext}`;
-    } else {
-      systemPrompt = isHindi
-        ? `Aap MyBookshelf AI hain — ek dost jaisa, samajhdaar tutor. Student ke sawaal ka jawab sirf neeche diye gaye PDF context ke aadhar par dijiye. Agar jawab context mein nahi hai, toh boliye "Yeh document mein nahi mila." Jawab simple, conversational Hindi mein dijiye — Devanagari script mein. Chhota aur saaf rakho kyunki yeh bol ke sunaya jayega.\nContext: ${retrievedContext}`
-        : `You are MyBookshelf AI, a friendly expert tutor. Answer the student's question strictly based on the provided context from their PDF. If the answer is not in the context, say "I couldn't find that in this document." Use short paragraphs. Mention the page number if known.\nContext: ${retrievedContext}`;
-      userPrompt = `Student Question: ${question}\n\nShow a page reference below your answer as "📄 Page X" based on the context provided.`;
-    }
+    const chatData = await chatResponse.json();
+    const answer = chatData.candidates[0].content.parts[0].text;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      return new Response(JSON.stringify({ error: "AI gateway error" }), {
-        status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const data = await response.json();
-    const answer = data.choices?.[0]?.message?.content ?? "No answer available.";
-
-    return new Response(JSON.stringify({ answer }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (e) {
-    console.error("pdf-ai error", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(JSON.stringify({ answer }), { headers: corsHeaders });
+  } catch (err: any) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
   }
 });
