@@ -62,7 +62,7 @@ export default function SettingsTab({ settings, onChange }: Props) {
       <Card className="p-6 space-y-5">
         <div className="space-y-1.5">
           <Label>Site Name</Label>
-          <Input value={form.site_name} onChange={(e) => setForm({ ...form, site_name: e.target.value })} placeholder="mybookshelf" />
+          <Input value={form.site_name} onChange={(e) => setForm({ ...form, site_name: e.target.value })} placeholder="MyBookshelf" />
         </div>
         <div className="space-y-1.5">
           <Label>Tagline</Label>

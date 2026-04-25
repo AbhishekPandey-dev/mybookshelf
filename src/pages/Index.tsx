@@ -55,7 +55,7 @@ export default function Index() {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [recentResources, setRecentResources] = useState<RecentResource[]>([]);
   const [settings, setSettings] = useState<Settings>({
-    site_name: "mybookshelf",
+    site_name: "MyBookshelf",
     tagline: "Learn anywhere, anytime.",
   });
   const [loading, setLoading] = useState(true);
@@ -95,7 +95,7 @@ export default function Index() {
 
       if (s)
         setSettings({
-          site_name: s.site_name || "mybookshelf",
+          site_name: s.site_name || "MyBookshelf",
           tagline: s.tagline || "Learn anywhere, anytime.",
         });
 

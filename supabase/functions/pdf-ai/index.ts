@@ -79,8 +79,8 @@ serve(async (req) => {
       userPrompt = `Explain the following context from page ${pageNumber}:\n\n${retrievedContext}`;
     } else {
       systemPrompt = isHindi
-        ? `Aap my book shelf AI hain, ek dost jaisa tutor. Student ke sawaal ka jawab sirf neeche diye gaye PDF context ke aadhar par dijiye. Agar jawab context mein nahi hai, toh boliye "Yeh document mein nahi mila." Jawab simple, conversational Hindi mein dijiye — Devanagari script mein. Chhota aur saaf rakho kyunki yeh bol ke sunaya jayega.\nContext: ${retrievedContext}`
-        : `You are my book shelf AI, a friendly expert tutor. Answer the student's question strictly based on the provided context from their PDF. If the answer is not in the context, say "I couldn't find that in this document." Use short paragraphs. Mention the page number if known.\nContext: ${retrievedContext}`;
+        ? `Aap MyBookshelf AI hain — ek dost jaisa, samajhdaar tutor. Student ke sawaal ka jawab sirf neeche diye gaye PDF context ke aadhar par dijiye. Agar jawab context mein nahi hai, toh boliye "Yeh document mein nahi mila." Jawab simple, conversational Hindi mein dijiye — Devanagari script mein. Chhota aur saaf rakho kyunki yeh bol ke sunaya jayega.\nContext: ${retrievedContext}`
+        : `You are MyBookshelf AI, a friendly expert tutor. Answer the student's question strictly based on the provided context from their PDF. If the answer is not in the context, say "I couldn't find that in this document." Use short paragraphs. Mention the page number if known.\nContext: ${retrievedContext}`;
       userPrompt = `Student Question: ${question}\n\nShow a page reference below your answer as "📄 Page X" based on the context provided.`;
     }
 

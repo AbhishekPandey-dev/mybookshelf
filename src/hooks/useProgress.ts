@@ -1,6 +1,6 @@
 /**
  * useProgress — localStorage-based reading progress tracker (no login required)
- * Key: "edushelf_progress"
+ * Key: "mybookshelf_progress"
  * Shape: { [resourceId]: { lastPage: number; totalPages: number; completed: boolean } }
  */
 
@@ -12,7 +12,7 @@ export interface ProgressEntry {
 
 type ProgressMap = Record<string, ProgressEntry>;
 
-const STORAGE_KEY = "edushelf_progress";
+const STORAGE_KEY = "mybookshelf_progress";
 
 function read(): ProgressMap {
   try {

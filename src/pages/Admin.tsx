@@ -65,7 +65,7 @@ export default function Admin() {
           </div>
           <div className="flex flex-col">
             <span className="font-heading font-black text-foreground leading-none tracking-tight">
-              {settings?.site_name || "mybookshelf"}
+              {settings?.site_name || "MyBookshelf"}
             </span>
             <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1 opacity-50">
               Admin Portal
@@ -94,7 +94,7 @@ export default function Admin() {
         <header className="md:hidden sticky top-0 z-20 bg-background/85 dark:bg-gray-900/85 backdrop-blur border-b border-border dark:border-gray-800 h-16 flex items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-card bg-gradient-primary flex items-center justify-center"><GraduationCap className="w-5 h-5 text-primary-foreground" /></div>
-            <span className="font-heading font-bold dark:text-gray-100">{settings?.site_name || "mybookshelf"}</span>
+            <span className="font-heading font-bold dark:text-gray-100">{settings?.site_name || "MyBookshelf"}</span>
           </Link>
           <div className="flex items-center gap-1">
             <ThemeToggle />

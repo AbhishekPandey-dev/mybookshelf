@@ -12,7 +12,7 @@ export function useBookmarks() {
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem("edushelf_bookmarks");
+      const stored = localStorage.getItem("mybookshelf_bookmarks");
       if (stored) setBookmarks(JSON.parse(stored));
     } catch {
       // ignore
@@ -20,7 +20,7 @@ export function useBookmarks() {
   }, []);
 
   const saveToStorage = (newBookmarks: Bookmark[]) => {
-    localStorage.setItem("edushelf_bookmarks", JSON.stringify(newBookmarks));
+    localStorage.setItem("mybookshelf_bookmarks", JSON.stringify(newBookmarks));
     setBookmarks(newBookmarks);
   };
 
