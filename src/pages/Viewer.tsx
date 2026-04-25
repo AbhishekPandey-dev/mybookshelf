@@ -24,8 +24,6 @@ export default function Viewer() {
   const [width, setWidth] = useState<number>(800);
   const containerRef = useRef<HTMLDivElement>(null);
   const [pdfDoc, setPdfDoc] = useState<any>(null);
-  const [pdfText, setPdfText] = useState("");
-  const [pageTexts, setPageTexts] = useState<Record<number, string>>({});
   const [isAIOpen, setIsAIOpen] = useState(false);
 
   // Toolbar auto-hide
@@ -62,22 +60,6 @@ export default function Viewer() {
     setNumPages(pdf.numPages);
     setPdfDoc(pdf);
   };
-
-  useEffect(() => {
-    const extractCurrentPageText = async () => {
-      if (!isAIOpen || !pdfDoc || pageTexts[page]) return;
-      try {
-        const p = await pdfDoc.getPage(page);
-        const tc = await p.getTextContent();
-        const txt = tc.items.map((it: any) => it.str).join(" ");
-        setPageTexts((prev) => ({ ...prev, [page]: txt }));
-        setPdfText((prev) => prev + `\n--- Page ${page} ---\n${txt}`);
-      } catch (err) {
-        console.error("Text extraction failed", err);
-      }
-    };
-    extractCurrentPageText();
-  }, [isAIOpen, page, pdfDoc, pageTexts]);
 
   const fullscreen = () => {
     const el = document.documentElement;
@@ -159,7 +141,7 @@ export default function Viewer() {
         </div>
       </div>
 
-      <AIAssistant pdfText={pdfText} currentPage={page} pageTexts={pageTexts} open={isAIOpen} onOpenChange={setIsAIOpen} />
+      <AIAssistant resourceId={resource.id} currentPage={page} open={isAIOpen} onOpenChange={setIsAIOpen} />
     </div>
   );
 }

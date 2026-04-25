@@ -10,15 +10,13 @@ type Lang = "en" | "hi";
 type Msg = { role: "user" | "assistant"; content: string; lang: Lang };
 
 export default function AIAssistant({
-  pdfText,
+  resourceId,
   currentPage,
-  pageTexts,
   open,
   onOpenChange,
 }: {
-  pdfText: string;
+  resourceId: string;
   currentPage: number;
-  pageTexts: Record<number, string>;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
@@ -58,11 +56,8 @@ export default function AIAssistant({
   }, []);
 
   const callAI = async (mode: "ask" | "explain", question?: string) => {
-    const text = mode === "explain"
-      ? (pageTexts[currentPage] || pdfText.slice(0, 8000))
-      : pdfText.slice(0, 12000);
     const { data, error } = await supabase.functions.invoke("pdf-ai", {
-      body: { mode, question, pdfText: text, pageNumber: currentPage, language: lang },
+      body: { mode, question, resourceId, pageNumber: currentPage, language: lang },
     });
     if (error) throw error;
     if (data?.error) throw new Error(data.error);
