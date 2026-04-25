@@ -1,17 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getColor } from "@/lib/colorMap";
-import { Search, BookOpen, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useCallback } from "react";
+import { Search, BookOpen, X, Loader2, ArrowRight } from "lucide-react";
+import { getMeshGradient } from "@/utils/gradients";
+import type { Subject } from "@/types";
 
-type Subject = { id: string; name: string; icon: string; color: string };
 type Settings = { site_name: string; tagline: string };
+type SearchResult = {
+  id: string;
+  title: string;
+  subject_id: string;
+  subjects: { name: string; icon: string; color: string } | null;
+};
 
 export default function Index() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -23,7 +27,7 @@ export default function Index() {
   const [loading, setLoading] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState<string>("all");
 
@@ -32,48 +36,30 @@ export default function Index() {
       const [{ data: subs }, { data: res }, { data: s }] = await Promise.all([
         supabase.from("subjects").select("*").order("order_index"),
         supabase.from("resources").select("id, subject_id"),
-        supabase
-          .from("teacher_settings")
-          .select("site_name, tagline")
-          .limit(1)
-          .maybeSingle(),
+        supabase.from("teacher_settings").select("site_name, tagline").limit(1).maybeSingle(),
       ]);
-      setSubjects(subs ?? []);
+      setSubjects((subs as Subject[]) ?? []);
       const c: Record<string, number> = {};
-      (res ?? []).forEach((r: any) => {
+      ((res ?? []) as { id: string; subject_id: string }[]).forEach((r) => {
         c[r.subject_id] = (c[r.subject_id] ?? 0) + 1;
       });
       setCounts(c);
-      if (s)
-        setSettings({
-          site_name: s.site_name || "mybookshelf",
-          tagline: s.tagline || "Learn anywhere, anytime.",
-        });
+      if (s) setSettings({ site_name: s.site_name || "mybookshelf", tagline: s.tagline || "Learn anywhere, anytime." });
       setLoading(false);
     })();
   }, []);
 
   useEffect(() => {
-    if (!search.trim()) {
-      setSearchResults([]);
-      setSearching(false);
-      return;
-    }
-    
+    if (!search.trim()) { setSearchResults([]); setSearching(false); return; }
     setSearching(true);
     const t = setTimeout(async () => {
-      const q = search.trim();
       let query = supabase
         .from("resources")
-        .select("id, title, description, subject_id, subjects(name, icon, color)")
-        .textSearch("fts", q, { config: "english", type: "websearch" });
-      
-      if (selectedSubject !== "all") {
-        query = query.eq("subject_id", selectedSubject);
-      }
-      
+        .select("id, title, subject_id, subjects(name, icon, color)")
+        .textSearch("fts", search.trim(), { config: "english", type: "websearch" });
+      if (selectedSubject !== "all") query = query.eq("subject_id", selectedSubject);
       const { data } = await query.limit(8);
-      setSearchResults(data ?? []);
+      setSearchResults((data as SearchResult[]) ?? []);
       setSearching(false);
     }, 300);
     return () => clearTimeout(t);
@@ -81,18 +67,16 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col animate-fade-in-fast">
-      {/* Sticky minimal navbar */}
+      {/* ── Sticky navbar ─────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 bg-background/80 backdrop-blur border-b border-border">
         <div className="container mx-auto h-16 flex items-center justify-between px-4">
-          <Link
-            to="/"
-            className="font-heading font-bold text-xl text-foreground"
-          >
+          <Link to="/" className="font-heading font-bold text-xl text-foreground">
             {settings.site_name}
           </Link>
+          {/* Task 3: 48×48 touch target */}
           <button
             onClick={() => setSearchOpen(true)}
-            className="w-12 h-12 rounded-full hover:bg-muted flex items-center justify-center press"
+            className="w-12 h-12 rounded-full hover:bg-muted flex items-center justify-center"
             aria-label="Search"
           >
             <Search className="w-5 h-5 text-foreground" />
@@ -100,7 +84,7 @@ export default function Index() {
         </div>
       </header>
 
-      {/* Search overlay */}
+      {/* ── Search overlay ────────────────────────────────────────── */}
       {searchOpen && (
         <div
           className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm animate-fade-in-fast"
@@ -112,7 +96,7 @@ export default function Index() {
           >
             <div className="max-w-2xl mx-auto">
               <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none">
                   {searching ? (
                     <Loader2 className="w-5 h-5 text-primary animate-spin" />
                   ) : (
@@ -126,24 +110,21 @@ export default function Index() {
                   placeholder="Search by title, subject or keyword…"
                   className="pl-12 pr-12 h-14 text-base shadow-card-hover border-0"
                 />
+                {/* Task 3: close button 44×44 */}
                 <button
-                  onClick={() => {
-                    setSearch("");
-                    setSearchResults([]);
-                    setSearchOpen(false);
-                  }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center"
+                  onClick={() => { setSearch(""); setSearchResults([]); setSearchOpen(false); }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full hover:bg-muted flex items-center justify-center"
+                  aria-label="Close search"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Subject Filters */}
+              {/* Task 3: Subject filter pills — min h-10 */}
               <div className="mt-4 overflow-x-auto pb-2 -mx-1 px-1 flex items-center gap-2 no-scrollbar">
                 <button
-                  key="all"
                   onClick={() => setSelectedSubject("all")}
-                  className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-smooth press ${
+                  className={`h-10 px-4 rounded-full text-sm font-medium whitespace-nowrap transition-smooth flex-shrink-0 ${
                     selectedSubject === "all"
                       ? "bg-indigo-600 text-white shadow-sm"
                       : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -155,7 +136,7 @@ export default function Index() {
                   <button
                     key={s.id}
                     onClick={() => setSelectedSubject(s.id)}
-                    className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-smooth press flex items-center gap-1.5 ${
+                    className={`h-10 px-4 rounded-full text-sm font-medium whitespace-nowrap transition-smooth flex-shrink-0 flex items-center gap-1.5 ${
                       selectedSubject === s.id
                         ? "bg-indigo-600 text-white shadow-sm"
                         : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -167,6 +148,7 @@ export default function Index() {
                 ))}
               </div>
 
+              {/* Search results */}
               {search.trim() && !searching && searchResults.length === 0 ? (
                 <div className="mt-8 text-center animate-fade-in">
                   <div className="bg-muted w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -175,15 +157,12 @@ export default function Index() {
                   <h3 className="text-lg font-semibold text-foreground mb-1">
                     No results found for "{search}"
                   </h3>
-                  <p className="text-muted-foreground mb-6 max-w-xs mx-auto">
-                    Try adjusting your search or subject filters to find what you're looking for.
+                  <p className="text-muted-foreground mb-6 max-w-xs mx-auto text-sm">
+                    Try adjusting your search or subject filters.
                   </p>
                   <Button
                     variant="outline"
-                    onClick={() => {
-                      setSearch("");
-                      setSelectedSubject("all");
-                    }}
+                    onClick={() => { setSearch(""); setSelectedSubject("all"); }}
                     className="rounded-full px-8"
                   >
                     Clear search
@@ -199,14 +178,10 @@ export default function Index() {
                         className="flex items-center gap-3 px-4 py-3 hover:bg-muted transition-smooth"
                         onClick={() => setSearchOpen(false)}
                       >
-                        <span className="text-2xl">{r.subjects?.icon}</span>
+                        <span className="text-2xl flex-shrink-0">{r.subjects?.icon}</span>
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium text-foreground truncate">
-                            {r.title}
-                          </div>
-                          <div className="text-xs text-muted-foreground truncate">
-                            {r.subjects?.name}
-                          </div>
+                          <div className="font-medium text-foreground truncate">{r.title}</div>
+                          <div className="text-xs text-muted-foreground truncate">{r.subjects?.name}</div>
                         </div>
                       </Link>
                     ))}
@@ -218,7 +193,7 @@ export default function Index() {
         </div>
       )}
 
-      {/* Hero */}
+      {/* ── Hero ──────────────────────────────────────────────────── */}
       <section className="container mx-auto px-4 pt-12 md:pt-20 pb-10 text-center max-w-3xl">
         <h1 className="font-heading text-4xl md:text-6xl font-extrabold tracking-tight text-foreground mb-4 animate-fade-in">
           {settings.tagline}
@@ -231,49 +206,72 @@ export default function Index() {
         </p>
       </section>
 
-      {/* Subject cards */}
+      {/* ── Subject cards ─────────────────────────────────────────── */}
       <main className="container mx-auto px-4 pb-16 flex-1">
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-5 max-w-5xl mx-auto">
             {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-44 rounded-card" />
+              <Skeleton key={i} className="h-52 rounded-2xl" />
             ))}
           </div>
         ) : subjects.length === 0 ? (
           <Card className="p-12 text-center max-w-md mx-auto border-dashed">
             <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-            <h3 className="font-heading font-semibold text-lg mb-1">
-              No subjects yet
-            </h3>
-            <p className="text-muted-foreground text-sm">
-              Your teacher hasn't added any content yet.
-            </p>
+            <h3 className="font-heading font-semibold text-lg mb-1">No subjects yet</h3>
+            <p className="text-muted-foreground text-sm">Your teacher hasn't added any content yet.</p>
           </Card>
         ) : (
+          /* Task 4: Mesh gradient subject cards */
           <div className="grid grid-cols-2 md:grid-cols-3 gap-5 max-w-5xl mx-auto">
             {subjects.map((s, idx) => {
-              const color = getColor(s.color);
               const count = counts[s.id] ?? 0;
+              const mesh = getMeshGradient(s.color);
               return (
                 <Link
                   key={s.id}
                   to={`/subject/${s.id}`}
                   style={{ animationDelay: `${idx * 40}ms` }}
-                  className="animate-fade-in"
+                  className="animate-fade-in group"
                 >
-                  <Card className="lift-card cursor-pointer h-full overflow-hidden p-0 border border-border">
-                    {/* colored top strip */}
-                    <div className={`h-2 w-full ${color.bg}`} />
-                    <div className="p-6 flex flex-col items-center text-center">
-                      <div className="text-5xl mb-4 leading-none">{s.icon}</div>
-                      <h3 className="font-heading font-bold text-lg text-foreground mb-2">
-                        {s.name}
-                      </h3>
-                      <span className="inline-block text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
-                        {count} resource{count === 1 ? "" : "s"}
+                  <div
+                    className="rounded-2xl overflow-hidden border border-white/10 shadow-md transition-all duration-200 group-hover:-translate-y-1 group-hover:shadow-xl bg-white"
+                  >
+                    {/* Mesh gradient hero area */}
+                    <div
+                      className="relative h-36 md:h-40 flex flex-col justify-between p-4"
+                      style={{ background: mesh, backgroundColor: "#4f46e5" }}
+                    >
+                      {/* Emoji */}
+                      <div className="flex justify-center items-center flex-1">
+                        <span
+                          className="text-5xl md:text-6xl leading-none"
+                          style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.3))" }}
+                        >
+                          {s.icon}
+                        </span>
+                      </div>
+
+                      {/* Bottom row: name + count badge */}
+                      <div className="flex items-end justify-between gap-2">
+                        <h3 className="font-heading font-bold text-white text-sm md:text-base leading-tight drop-shadow">
+                          {s.name}
+                        </h3>
+                        <span className="flex-shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-black/20 text-white/90 backdrop-blur-sm">
+                          {count} {count === 1 ? "resource" : "resources"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* White footer strip */}
+                    <div className="px-4 py-3 flex items-center justify-between bg-white">
+                      <span className="text-xs text-muted-foreground">
+                        {count === 0 ? "No resources yet" : `${count} PDF${count === 1 ? "" : "s"} available`}
+                      </span>
+                      <span className="text-xs font-semibold text-indigo-600 flex items-center gap-1 group-hover:gap-1.5 transition-all">
+                        View all <ArrowRight className="w-3 h-3" />
                       </span>
                     </div>
-                  </Card>
+                  </div>
                 </Link>
               );
             })}
