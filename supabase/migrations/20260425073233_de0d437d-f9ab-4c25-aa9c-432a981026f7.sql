@@ -77,7 +77,7 @@ ALTER TABLE public.resources ENABLE ROW LEVEL SECURITY;
 
 CREATE TABLE public.teacher_settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  site_name TEXT NOT NULL DEFAULT 'EduShelf',
+  site_name TEXT NOT NULL DEFAULT 'mybookshelf',
   tagline TEXT NOT NULL DEFAULT 'Your classroom, always with you',
   teacher_email TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -117,4 +117,4 @@ CREATE POLICY "Teachers delete pdfs" ON storage.objects FOR DELETE TO authentica
   USING (bucket_id = 'pdfs' AND public.has_role(auth.uid(),'teacher'));
 
 -- Default settings row
-INSERT INTO public.teacher_settings (site_name, tagline) VALUES ('EduShelf','Your classroom, always with you');
+INSERT INTO public.teacher_settings (site_name, tagline) VALUES ('mybookshelf','Your classroom, always with you');

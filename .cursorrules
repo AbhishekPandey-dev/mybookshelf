@@ -167,7 +167,7 @@ User is planning a feature or project?
 
 ## 📌 Current Project Context
 
-**Project:** EduShelf — Teacher Resource Sharing Website
+**Project:** mybookshelf — Teacher Resource Sharing Website
 **Stack:** React + Vite + TypeScript + Tailwind CSS + Supabase + Anthropic Claude API
 **Repo:** Cloned from Lovable.dev via GitHub
 **Active Skills for this project:**

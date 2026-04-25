@@ -57,26 +57,53 @@ export default function Auth() {
           <div className="w-12 h-12 rounded-card bg-gradient-primary flex items-center justify-center">
             <GraduationCap className="w-6 h-6 text-primary-foreground" />
           </div>
-          <span className="font-heading font-bold text-2xl text-foreground">EduShelf</span>
+          <span className="font-heading font-bold text-2xl text-foreground">
+            mybookshelf
+          </span>
         </Link>
         <h1 className="font-heading font-bold text-2xl text-center mb-1 text-foreground">
           {needsSignup ? "First-time Setup" : "Teacher Login"}
         </h1>
         <p className="text-center text-muted-foreground text-sm mb-6">
-          {needsSignup ? "Create your teacher admin account." : "Sign in to manage your content."}
+          {needsSignup
+            ? "Create your teacher admin account."
+            : "Sign in to manage your content."}
         </p>
 
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+            <Input
+              id="email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+            <Input
+              id="password"
+              type="password"
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+            />
           </div>
           <Button type="submit" size="lg" className="w-full" disabled={busy}>
-            {busy ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Please wait…</> : (needsSignup ? "Create Account" : "Login")}
+            {busy ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Please wait…
+              </>
+            ) : needsSignup ? (
+              "Create Account"
+            ) : (
+              "Login"
+            )}
           </Button>
         </form>
 
@@ -85,7 +112,9 @@ export default function Auth() {
           onClick={() => setNeedsSignup((v) => !v)}
           className="w-full mt-6 text-xs text-muted-foreground hover:text-foreground transition-smooth"
         >
-          {needsSignup ? "Already have an account? Login" : "First time setup? Create teacher account"}
+          {needsSignup
+            ? "Already have an account? Login"
+            : "First time setup? Create teacher account"}
         </button>
       </Card>
     </div>
