@@ -5,7 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getColor } from "@/lib/colorMap";
-import { Search, BookOpen, X } from "lucide-react";
+import { Search, BookOpen, X, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useCallback } from "react";
 
 type Subject = { id: string; name: string; icon: string; color: string };
 type Settings = { site_name: string; tagline: string };
@@ -21,6 +24,8 @@ export default function Index() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedSubject, setSelectedSubject] = useState<string>("all");
 
   useEffect(() => {
     (async () => {
@@ -51,21 +56,28 @@ export default function Index() {
   useEffect(() => {
     if (!search.trim()) {
       setSearchResults([]);
+      setSearching(false);
       return;
     }
+    
+    setSearching(true);
     const t = setTimeout(async () => {
       const q = search.trim();
-      const { data } = await supabase
+      let query = supabase
         .from("resources")
-        .select(
-          "id, title, description, subject_id, subjects(name, icon, color)",
-        )
-        .or(`title.ilike.%${q}%,description.ilike.%${q}%`)
-        .limit(8);
+        .select("id, title, description, subject_id, subjects(name, icon, color)")
+        .textSearch("fts", q, { config: "english", type: "websearch" });
+      
+      if (selectedSubject !== "all") {
+        query = query.eq("subject_id", selectedSubject);
+      }
+      
+      const { data } = await query.limit(8);
       setSearchResults(data ?? []);
-    }, 200);
+      setSearching(false);
+    }, 300);
     return () => clearTimeout(t);
-  }, [search]);
+  }, [search, selectedSubject]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col animate-fade-in-fast">
@@ -100,7 +112,13 @@ export default function Index() {
           >
             <div className="max-w-2xl mx-auto">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center">
+                  {searching ? (
+                    <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                  ) : (
+                    <Search className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </div>
                 <Input
                   autoFocus
                   value={search}
@@ -109,33 +127,91 @@ export default function Index() {
                   className="pl-12 pr-12 h-14 text-base shadow-card-hover border-0"
                 />
                 <button
-                  onClick={() => setSearchOpen(false)}
+                  onClick={() => {
+                    setSearch("");
+                    setSearchResults([]);
+                    setSearchOpen(false);
+                  }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              {searchResults.length > 0 && (
-                <Card className="mt-3 overflow-hidden p-0 shadow-pop">
-                  {searchResults.map((r) => (
-                    <Link
-                      key={r.id}
-                      to={`/read/${r.id}`}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-muted transition-smooth"
-                      onClick={() => setSearchOpen(false)}
-                    >
-                      <span className="text-2xl">{r.subjects?.icon}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-foreground truncate">
-                          {r.title}
+
+              {/* Subject Filters */}
+              <div className="mt-4 overflow-x-auto pb-2 -mx-1 px-1 flex items-center gap-2 no-scrollbar">
+                <button
+                  key="all"
+                  onClick={() => setSelectedSubject("all")}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-smooth press ${
+                    selectedSubject === "all"
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  All
+                </button>
+                {subjects.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setSelectedSubject(s.id)}
+                    className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-smooth press flex items-center gap-1.5 ${
+                      selectedSubject === s.id
+                        ? "bg-indigo-600 text-white shadow-sm"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    }`}
+                  >
+                    <span>{s.icon}</span>
+                    <span>{s.name}</span>
+                  </button>
+                ))}
+              </div>
+
+              {search.trim() && !searching && searchResults.length === 0 ? (
+                <div className="mt-8 text-center animate-fade-in">
+                  <div className="bg-muted w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search className="w-8 h-8 text-muted-foreground opacity-50" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-1">
+                    No results found for "{search}"
+                  </h3>
+                  <p className="text-muted-foreground mb-6 max-w-xs mx-auto">
+                    Try adjusting your search or subject filters to find what you're looking for.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSearch("");
+                      setSelectedSubject("all");
+                    }}
+                    className="rounded-full px-8"
+                  >
+                    Clear search
+                  </Button>
+                </div>
+              ) : (
+                searchResults.length > 0 && (
+                  <Card className="mt-3 overflow-hidden p-0 shadow-pop animate-in slide-in-from-top-2 duration-300">
+                    {searchResults.map((r) => (
+                      <Link
+                        key={r.id}
+                        to={`/read/${r.id}`}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-muted transition-smooth"
+                        onClick={() => setSearchOpen(false)}
+                      >
+                        <span className="text-2xl">{r.subjects?.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-foreground truncate">
+                            {r.title}
+                          </div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {r.subjects?.name}
+                          </div>
                         </div>
-                        <div className="text-xs text-muted-foreground truncate">
-                          {r.subjects?.name}
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </Card>
+                      </Link>
+                    ))}
+                  </Card>
+                )
               )}
             </div>
           </div>
