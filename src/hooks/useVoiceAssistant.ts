@@ -18,7 +18,7 @@ export interface VoiceAssistantReturn {
 export function useVoiceAssistant(lang: Lang): VoiceAssistantReturn {
   const [isListening, setIsListening] = useState(false);
   const [speakingState, setSpeakingState] = useState<SpeakingState>("idle");
-  const recogRef = useRef<SpeechRecognition | null>(null);
+  const recogRef = useRef<{ stop(): void } | null>(null);
 
   // Preload voices on mount
   useEffect(() => {
@@ -97,9 +97,26 @@ export function useVoiceAssistant(lang: Lang): VoiceAssistantReturn {
   };
 
   const startListening = (onResult: (transcript: string) => void): void => {
+    // SpeechRecognition is not universally typed in lib.dom — define locally
+    type SpeechRecognitionCtor = new () => {
+      lang: string;
+      interimResults: boolean;
+      onresult: ((e: { results: { [i: number]: { [j: number]: { transcript: string } } } }) => void) | null;
+      onerror: (() => void) | null;
+      onend: (() => void) | null;
+      start(): void;
+      stop(): void;
+    };
+
+    type WindowWithSR = Window & {
+      SpeechRecognition?: SpeechRecognitionCtor;
+      webkitSpeechRecognition?: SpeechRecognitionCtor;
+    };
+
     const SR =
-      (window as Window & { SpeechRecognition?: typeof SpeechRecognition; webkitSpeechRecognition?: typeof SpeechRecognition }).SpeechRecognition ||
-      (window as Window & { SpeechRecognition?: typeof SpeechRecognition; webkitSpeechRecognition?: typeof SpeechRecognition }).webkitSpeechRecognition;
+      (window as WindowWithSR).SpeechRecognition ||
+      (window as WindowWithSR).webkitSpeechRecognition;
+
     if (!SR) {
       toast.error("Voice input not supported in this browser");
       return;
@@ -107,7 +124,7 @@ export function useVoiceAssistant(lang: Lang): VoiceAssistantReturn {
     const recog = new SR();
     recog.lang = lang === "hi" ? "hi-IN" : "en-US";
     recog.interimResults = false;
-    recog.onresult = (e: SpeechRecognitionEvent) => {
+    recog.onresult = (e) => {
       const transcript = e.results[0][0].transcript;
       setIsListening(false);
       onResult(transcript);
