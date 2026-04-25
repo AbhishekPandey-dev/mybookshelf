@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { GraduationCap, BookOpen, UploadCloud, Settings as SettingsIcon, LogOut, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import ContentTab from "@/components/admin/ContentTab";
 import UploadTab from "@/components/admin/UploadTab";
 import SettingsTab from "@/components/admin/SettingsTab";
@@ -80,14 +81,17 @@ export default function Admin() {
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 pb-20 md:pb-0">
-        <header className="md:hidden sticky top-0 z-20 bg-background/85 backdrop-blur border-b border-border h-16 flex items-center justify-between px-4">
+        <header className="md:hidden sticky top-0 z-20 bg-background/85 dark:bg-gray-900/85 backdrop-blur border-b border-border dark:border-gray-800 h-16 flex items-center justify-between px-4">
           <Link to="/" className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-card bg-gradient-primary flex items-center justify-center"><GraduationCap className="w-5 h-5 text-primary-foreground" /></div>
-            <span className="font-heading font-bold">{settings?.site_name || "mybookshelf"}</span>
+            <span className="font-heading font-bold dark:text-gray-100">{settings?.site_name || "mybookshelf"}</span>
           </Link>
-          <button onClick={() => signOut().then(() => navigate("/"))} className="w-11 h-11 rounded-full hover:bg-muted flex items-center justify-center">
-            <LogOut className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            <button onClick={() => signOut().then(() => navigate("/"))} className="w-11 h-11 rounded-full hover:bg-muted dark:hover:bg-gray-800 flex items-center justify-center">
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
         </header>
 
         <main className="flex-1 container mx-auto px-4 md:px-8 py-8 max-w-5xl w-full">
