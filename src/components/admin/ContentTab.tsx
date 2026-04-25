@@ -16,6 +16,8 @@ import {
   Edit,
   ChevronUp,
   ChevronDown,
+  Sparkles,
+  Settings2
 } from "lucide-react";
 import { toast } from "sonner";
 import { getColor } from "@/lib/colorMap";
@@ -208,33 +210,47 @@ export default function ContentTab({
                             return (
                               <div
                                 key={r.id}
-                                className="px-5 py-3 flex items-center gap-3 flex-wrap hover:bg-muted/40 transition-smooth"
+                                className="px-5 py-4 flex items-center gap-4 flex-wrap hover:bg-muted/40 transition-smooth group"
                               >
-                                <span className="text-xl flex-shrink-0">
+                                <div className="w-12 h-12 rounded-xl bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-110 transition-transform duration-300 shadow-sm border border-border/50">
                                   {r.cover_emoji || "📄"}
-                                </span>
+                                </div>
                                 <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-foreground truncate">
+                                  <div className="font-heading font-bold text-foreground truncate text-sm sm:text-base">
                                     {r.title}
                                   </div>
-                                  <div className="flex items-center gap-2 mt-0.5">
+                                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                     <span
-                                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${badge.cls}`}
+                                      className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-lg border border-current opacity-70 ${badge.cls}`}
                                     >
                                       {badge.label}
                                     </span>
+                                    {r.grade_level && (
+                                      <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                                        {r.grade_level}
+                                      </span>
+                                    )}
                                     {r.unit_number && (
-                                      <span className="text-xs text-muted-foreground">
+                                      <span className="text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-0.5 rounded">
                                         {r.unit_number}
+                                      </span>
+                                    )}
+                                    {r.ai_processed ? (
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/50">
+                                        <Sparkles className="w-2.5 h-2.5" /> AI Ready
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/50 animate-pulse">
+                                        <Settings2 className="w-2.5 h-2.5" /> Processing
                                       </span>
                                     )}
                                   </div>
                                 </div>
-                                <div className="flex gap-1">
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    className="h-9 w-9"
+                                    className="h-8 w-8 rounded-full"
                                     onClick={() => move(r, -1)}
                                     disabled={i === 0}
                                     aria-label="Move up"
@@ -244,7 +260,7 @@ export default function ContentTab({
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    className="h-9 w-9"
+                                    className="h-8 w-8 rounded-full"
                                     onClick={() => move(r, 1)}
                                     disabled={i === items.length - 1}
                                     aria-label="Move down"
@@ -254,7 +270,7 @@ export default function ContentTab({
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    className="h-9 w-9"
+                                    className="h-8 w-8 rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-950 hover:text-indigo-600 dark:hover:text-indigo-400"
                                     onClick={() => setEditing(r)}
                                     aria-label="Edit"
                                   >
@@ -263,7 +279,7 @@ export default function ContentTab({
                                   <Button
                                     size="icon"
                                     variant="ghost"
-                                    className="h-9 w-9 text-destructive hover:text-destructive"
+                                    className="h-8 w-8 rounded-full text-destructive hover:text-white hover:bg-destructive"
                                     onClick={() => del(r)}
                                     aria-label="Delete"
                                   >

@@ -14,7 +14,7 @@ type Book = { id: string; title: string; description: string | null; order_index
 type Resource = {
   id: string; title: string; description: string | null; content_type: string;
   unit_number: string | null; book_id: string | null; order_index: number;
-  cover_emoji: string | null; cover_color: string | null;
+  cover_emoji: string | null; cover_color: string | null; grade_level?: string | null;
 };
 
 function copyShareLink(resourceId: string): void {
@@ -133,10 +133,15 @@ export default function Subject() {
         )}
 
         {resources.length === 0 && (
-          <Card className="p-12 text-center border-dashed dark:bg-gray-900 dark:border-gray-800">
-            <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
-            <p className="text-muted-foreground">No resources in this subject yet.</p>
-          </Card>
+          <div className="py-20 text-center animate-in fade-in zoom-in duration-500">
+            <div className="w-20 h-20 bg-muted dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
+              <FileText className="w-10 h-10 text-muted-foreground" />
+            </div>
+            <h3 className="text-xl font-heading font-bold text-foreground dark:text-gray-100 mb-2">No resources yet</h3>
+            <p className="text-muted-foreground max-w-xs mx-auto">
+              This subject doesn't have any books or units uploaded yet. Check back soon!
+            </p>
+          </div>
         )}
       </main>
     </div>
@@ -169,6 +174,19 @@ function UnitRow({ r, index }: { r: Resource; index?: number }) {
             {r.description && (
               <div className="text-sm text-muted-foreground line-clamp-1">{r.description}</div>
             )}
+            
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              {r.grade_level && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 text-[10px] font-bold uppercase tracking-wider border border-amber-100 dark:border-amber-900/50">
+                  {r.grade_level}
+                </span>
+              )}
+              {r.content_type && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 text-[10px] font-bold uppercase tracking-wider border border-blue-100 dark:border-blue-900/50">
+                  {r.content_type.replace("_", " ")}
+                </span>
+              )}
+            </div>
 
             {/* Progress info */}
             {prog && prog.lastPage > 0 && (

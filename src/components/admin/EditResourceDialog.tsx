@@ -27,6 +27,7 @@ type FormState = {
   subject_id: string;
   content_type: "full" | "unit" | "part";
   unit_number: string;
+  grade_level: string;
   cover_emoji: string;
   allow_download: boolean;
 };
@@ -38,6 +39,7 @@ export default function EditResourceDialog({ resource, subjects, onClose, onSave
     subject_id: resource.subject_id,
     content_type: resource.content_type,
     unit_number: resource.unit_number ?? "",
+    grade_level: resource.grade_level ?? "",
     cover_emoji: resource.cover_emoji ?? "📄",
     allow_download: resource.allow_download,
   });
@@ -54,6 +56,7 @@ export default function EditResourceDialog({ resource, subjects, onClose, onSave
           subject_id: form.subject_id,
           content_type: form.content_type,
           unit_number: form.unit_number || null,
+          grade_level: form.grade_level || null,
           cover_emoji: form.cover_emoji || "📄",
           allow_download: form.allow_download,
         })
@@ -78,6 +81,10 @@ export default function EditResourceDialog({ resource, subjects, onClose, onSave
           <div className="space-y-1.5">
             <Label>Title</Label>
             <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Grade Level</Label>
+            <Input value={form.grade_level} onChange={(e) => setForm({ ...form, grade_level: e.target.value })} placeholder="e.g. Grade 10" />
           </div>
           <div className="space-y-1.5">
             <Label>Subject</Label>

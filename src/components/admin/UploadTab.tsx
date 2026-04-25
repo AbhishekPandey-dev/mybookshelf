@@ -36,6 +36,7 @@ export default function UploadTab({ subjects, onDone }: Props) {
   const [contentType, setContentType] = useState<"full" | "unit" | "part">("unit");
   const [unitNumber, setUnitNumber] = useState("");
   const [description, setDescription] = useState("");
+  const [gradeLevel, setGradeLevel] = useState("");
   const [allowDownload, setAllowDownload] = useState(true);
 
   const onPickFile = (f: File | null): void => {
@@ -75,11 +76,24 @@ export default function UploadTab({ subjects, onDone }: Props) {
       const { data: { publicUrl } } = supabase.storage.from("pdfs").getPublicUrl(path);
       const { data: peers } = await supabase.from("resources").select("id").eq("subject_id", subjectId);
       const { data: inserted, error: insErr } = await supabase.from("resources")
-        .insert({ subject_id: subjectId, title: title.trim(), description: description.trim() || null, content_type: contentType, unit_number: contentType !== "full" ? unitNumber.trim() || null : null, pdf_url: publicUrl, pdf_path: path, allow_download: allowDownload, cover_emoji: "📄", cover_color: "indigo", order_index: peers?.length ?? 0 })
+        .insert({ 
+          subject_id: subjectId, 
+          title: title.trim(), 
+          description: description.trim() || null, 
+          content_type: contentType, 
+          unit_number: contentType !== "full" ? unitNumber.trim() || null : null, 
+          grade_level: gradeLevel.trim() || null,
+          pdf_url: publicUrl, 
+          pdf_path: path, 
+          allow_download: allowDownload, 
+          cover_emoji: "📄", 
+          cover_color: "indigo", 
+          order_index: peers?.length ?? 0 
+        })
         .select().single();
       if (insErr) throw insErr;
       setSuccess({ link: `${window.location.origin}/read/${inserted.id}`, title: title.trim() });
-      setFile(null); setTitle(""); setUnitNumber(""); setDescription("");
+      setFile(null); setTitle(""); setUnitNumber(""); setDescription(""); setGradeLevel("");
       onDone();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Upload failed");
@@ -131,6 +145,10 @@ export default function UploadTab({ subjects, onDone }: Props) {
           <div className="space-y-1.5">
             <Label htmlFor="title">Title</Label>
             <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Algebra Basics" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="grade">Grade Level (optional)</Label>
+            <Input id="grade" value={gradeLevel} onChange={(e) => setGradeLevel(e.target.value)} placeholder="e.g. Grade 10" />
           </div>
           <div className="space-y-1.5">
             <Label>Content Type</Label>

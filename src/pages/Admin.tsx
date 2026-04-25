@@ -8,13 +8,15 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import ContentTab from "@/components/admin/ContentTab";
 import UploadTab from "@/components/admin/UploadTab";
 import SettingsTab from "@/components/admin/SettingsTab";
+import AnalyticsTab from "@/components/admin/AnalyticsTab";
 import type { Subject, Resource, TeacherSettings } from "@/types";
 
-type Tab = "content" | "upload" | "settings";
+type Tab = "content" | "upload" | "analytics" | "settings";
 
 const NAV_ITEMS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "content", label: "My Content", icon: BookOpen },
   { id: "upload", label: "Upload", icon: UploadCloud },
+  { id: "analytics", label: "Analytics", icon: BookOpen },
   { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
 
@@ -56,24 +58,32 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-background flex animate-fade-in-fast">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 border-r border-border bg-card sticky top-0 h-screen">
-        <Link to="/" className="flex items-center gap-2 px-5 h-16 border-b border-border">
-          <div className="w-9 h-9 rounded-card bg-gradient-primary flex items-center justify-center">
-            <GraduationCap className="w-5 h-5 text-primary-foreground" />
+      <aside className="hidden md:flex flex-col w-72 border-r border-border bg-card/50 backdrop-blur sticky top-0 h-screen">
+        <Link to="/" className="flex items-center gap-3 px-6 h-20 border-b border-border">
+          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <GraduationCap className="w-6 h-6 text-white" />
           </div>
-          <span className="font-heading font-bold text-foreground">{settings?.site_name || "mybookshelf"}</span>
+          <div className="flex flex-col">
+            <span className="font-heading font-black text-foreground leading-none tracking-tight">
+              {settings?.site_name || "mybookshelf"}
+            </span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1 opacity-50">
+              Admin Portal
+            </span>
+          </div>
         </Link>
-        <nav className="flex-1 p-3 space-y-1">
+        <nav className="flex-1 p-4 space-y-2 mt-4">
           {NAV_ITEMS.map((item) => (
             <button key={item.id} onClick={() => setTab(item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-button text-sm font-medium transition-smooth press ${tab === item.id ? "bg-primary-soft text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
-              <item.icon className="w-5 h-5" />{item.label}
+              className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold transition-all duration-200 press ${tab === item.id ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/30" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
+              <item.icon className={`w-5 h-5 ${tab === item.id ? "text-white" : "text-muted-foreground"}`} />
+              {item.label}
             </button>
           ))}
         </nav>
-        <div className="p-3 border-t border-border">
+        <div className="p-4 border-t border-border">
           <button onClick={() => signOut().then(() => navigate("/"))}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-button text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-smooth press">
+            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all press">
             <LogOut className="w-5 h-5" /> Sign Out
           </button>
         </div>
@@ -97,6 +107,7 @@ export default function Admin() {
         <main className="flex-1 container mx-auto px-4 md:px-8 py-8 max-w-5xl w-full">
           {tab === "content" && <ContentTab subjects={subjects} resources={resources} settings={settings} onChange={refresh} />}
           {tab === "upload" && <UploadTab subjects={subjects} onDone={refresh} />}
+          {tab === "analytics" && <AnalyticsTab />}
           {tab === "settings" && <SettingsTab settings={settings} onChange={refresh} />}
         </main>
 

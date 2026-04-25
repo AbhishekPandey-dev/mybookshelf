@@ -8,11 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, ZoomIn, ZoomOut,
-  Maximize, Download, Loader2, Sparkles, List, ChevronRight as ChevRight,
+  Maximize, Download, Loader2, Sparkles, List, ChevronRight as ChevRight, Bookmark,
 } from "lucide-react";
 import AIAssistant from "@/components/AIAssistant";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useProgress } from "@/hooks/useProgress";
+import { useBookmarks } from "@/hooks/useBookmarks";
 import { toast } from "sonner";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -56,6 +57,9 @@ export default function Viewer() {
   // ── Progress tracking (Task 2) ───────────────────────────────────────────
   const { getProgress, setProgress } = useProgress(id ?? "");
   const [resumePage, setResumePage] = useState<number | null>(null);
+
+  // ── Bookmarks ────────────────────────────────────────────────────────────
+  const { addBookmark, removeBookmark, isBookmarked } = useBookmarks();
 
   // ── ResizeObserver for accurate PDF width ────────────────────────────────
   useEffect(() => {
@@ -142,6 +146,37 @@ export default function Viewer() {
     else document.documentElement.requestFullscreen?.();
   };
 
+  const toggleBookmark = useCallback(() => {
+    if (!resource) return;
+    if (isBookmarked(resource.id, page)) {
+      removeBookmark(resource.id, page);
+      toast("Bookmark removed");
+    } else {
+      addBookmark(resource.id, resource.title, page);
+      toast.success(`📌 Page ${page} bookmarked`);
+    }
+  }, [resource, page, isBookmarked, removeBookmark, addBookmark]);
+
+  // ── Keyboard shortcuts ───────────────────────────────────────────────────
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      if (e.key === "ArrowRight") {
+        goToPage(page + 1);
+      } else if (e.key === "ArrowLeft") {
+        goToPage(page - 1);
+      } else if (e.key.toLowerCase() === "b") {
+        toggleBookmark();
+      } else if (e.key.toLowerCase() === "f") {
+        fullscreen();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [page, numPages, toggleBookmark]);
+
   if (!resource) {
     return (
       <div className="min-h-screen flex items-center justify-center dark:bg-gray-950">
@@ -155,11 +190,11 @@ export default function Viewer() {
   return (
     <div className="fixed inset-0 bg-muted/50 dark:bg-gray-950 flex flex-col animate-fade-in-fast">
       {/* ── Top bar ─────────────────────────────────────────────────── */}
-      <div className="bg-background/90 dark:bg-gray-900/90 backdrop-blur border-b border-border dark:border-gray-800 flex-shrink-0">
+      <div className="bg-background/60 dark:bg-gray-900/60 backdrop-blur-xl border-b border-white/10 dark:border-white/5 flex-shrink-0 sticky top-0 z-[40]">
         <div className="px-3 sm:px-4 h-14 flex items-center gap-1">
           <Link
             to={`/subject/${resource.subject_id}`}
-            className="w-11 h-11 rounded-full hover:bg-muted dark:hover:bg-gray-800 flex items-center justify-center flex-shrink-0"
+            className="w-10 h-10 rounded-full hover:bg-white/20 dark:hover:bg-white/5 flex items-center justify-center flex-shrink-0 transition-colors"
             aria-label="Back"
           >
             <ArrowLeft className="w-5 h-5 text-foreground dark:text-gray-100" />
@@ -169,13 +204,13 @@ export default function Viewer() {
           {resumePage && (
             <button
               onClick={() => { goToPage(resumePage); setResumePage(null); }}
-              className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 px-3 py-1.5 rounded-full hover:bg-indigo-100 dark:hover:bg-indigo-900 transition-colors flex-shrink-0"
+              className="hidden sm:flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/50 backdrop-blur px-4 py-2 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900 transition-all flex-shrink-0 border border-indigo-100/50 dark:border-indigo-500/20"
             >
               Resume from page {resumePage}
             </button>
           )}
 
-          <h1 className="font-heading font-semibold text-foreground dark:text-gray-100 truncate flex-1 min-w-0 text-sm sm:text-base">
+          <h1 className="font-heading font-black text-foreground dark:text-gray-100 truncate flex-1 min-w-0 text-sm sm:text-base px-2">
             {resource.title}
           </h1>
 
@@ -183,7 +218,7 @@ export default function Viewer() {
           {outline && outline.length > 0 && (
             <button
               onClick={() => setTocOpen(true)}
-              className="w-11 h-11 rounded-full hover:bg-muted dark:hover:bg-gray-800 flex items-center justify-center flex-shrink-0"
+              className="w-10 h-10 rounded-full hover:bg-white/20 dark:hover:bg-white/5 flex items-center justify-center flex-shrink-0 transition-colors"
               aria-label="Table of contents"
             >
               <List className="w-5 h-5 text-foreground dark:text-gray-100" />
@@ -222,8 +257,8 @@ export default function Viewer() {
       </div>
 
       {/* ── Permanent bottom toolbar ─────────────────────────────────── */}
-      <div className="flex-shrink-0 bg-background dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 shadow-[0_-2px_8px_rgba(0,0,0,0.06)] h-[52px] flex items-center px-2 gap-1 z-20">
-        <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full flex-shrink-0"
+      <div className="flex-shrink-0 bg-background/60 dark:bg-gray-900/60 backdrop-blur-xl border-t border-white/10 dark:border-white/5 shadow-2xl h-[60px] flex items-center px-4 gap-2 z-[40]">
+        <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full flex-shrink-0 hover:bg-white/20"
           onClick={() => goToPage(page - 1)} disabled={page <= 1} aria-label="Previous page">
           <ChevronLeft className="w-5 h-5" />
         </Button>
@@ -237,63 +272,72 @@ export default function Viewer() {
               onChange={(e) => setPageInput(e.target.value)}
               onBlur={commitPageInput}
               onKeyDown={(e) => { if (e.key === "Enter") commitPageInput(); if (e.key === "Escape") setEditingPage(false); }}
-              className="w-12 text-center text-sm font-medium border border-border dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-md h-8 focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-14 text-center text-sm font-black border-2 border-primary/20 dark:border-white/10 dark:bg-gray-800 dark:text-gray-100 rounded-lg h-9 focus:outline-none focus:ring-2 focus:ring-primary/40 bg-white/50"
             />
           ) : (
             <button
               onClick={() => { setEditingPage(true); setPageInput(String(page)); }}
-              className="text-sm font-medium text-foreground dark:text-gray-200 min-w-[56px] text-center px-1 py-1 rounded hover:bg-muted dark:hover:bg-gray-800"
+              className="text-xs font-black text-foreground dark:text-gray-200 min-w-[70px] tracking-widest text-center px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors uppercase"
             >
-              {page} / {numPages || "—"}
+              {page} <span className="opacity-30">/</span> {numPages || "—"}
             </button>
           )}
         </div>
 
-        <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full flex-shrink-0"
+        <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full flex-shrink-0 hover:bg-white/20"
+          onClick={toggleBookmark} aria-label="Bookmark page">
+          <Bookmark className={`w-5 h-5 transition-all ${resource && isBookmarked(resource.id, page) ? "fill-current text-indigo-500 scale-110" : "opacity-40"}`} />
+        </Button>
+
+        <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full flex-shrink-0 hover:bg-white/20"
           onClick={() => goToPage(page + 1)} disabled={page >= numPages} aria-label="Next page">
           <ChevronRight className="w-5 h-5" />
         </Button>
 
-        <div className="w-px h-6 bg-border dark:bg-gray-700 mx-1 flex-shrink-0" />
+        <div className="w-px h-8 bg-white/10 mx-2 flex-shrink-0" />
 
-        <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full flex-shrink-0"
-          onClick={() => setScale((s) => Math.max(0.5, +(s - 0.15).toFixed(2)))} aria-label="Zoom out">
-          <ZoomOut className="w-4 h-4" />
-        </Button>
+        <div className="hidden sm:flex items-center gap-1">
+          <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full flex-shrink-0 hover:bg-white/20"
+            onClick={() => setScale((s) => Math.max(0.5, +(s - 0.15).toFixed(2)))} aria-label="Zoom out">
+            <ZoomOut className="w-4 h-4" />
+          </Button>
 
-        <span className="hidden sm:block text-xs text-muted-foreground w-10 text-center flex-shrink-0">
-          {Math.round(scale * 100)}%
-        </span>
+          <span className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground w-12 text-center flex-shrink-0">
+            {Math.round(scale * 100)}%
+          </span>
 
-        <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full flex-shrink-0"
-          onClick={() => setScale((s) => Math.min(3.0, +(s + 0.15).toFixed(2)))} aria-label="Zoom in">
-          <ZoomIn className="w-4 h-4" />
-        </Button>
+          <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full flex-shrink-0 hover:bg-white/20"
+            onClick={() => setScale((s) => Math.min(3.0, +(s + 0.15).toFixed(2)))} aria-label="Zoom in">
+            <ZoomIn className="w-4 h-4" />
+          </Button>
+        </div>
 
-        <div className="w-px h-6 bg-border dark:bg-gray-700 mx-1 flex-shrink-0" />
+        <div className="hidden sm:block w-px h-8 bg-white/10 mx-2 flex-shrink-0" />
 
-        <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full flex-shrink-0"
+        <Button size="icon" variant="ghost" className="h-10 w-10 rounded-full flex-shrink-0 hover:bg-white/20"
           onClick={fullscreen} aria-label="Fullscreen">
-          <Maximize className="w-4 h-4" />
+          <Maximize className="w-4 h-4 opacity-60" />
         </Button>
 
         {resource.allow_download && (
           <a href={resource.pdf_url} download target="_blank" rel="noreferrer"
             aria-label="Download"
-            className="h-10 w-10 rounded-full hover:bg-muted dark:hover:bg-gray-800 flex items-center justify-center flex-shrink-0">
-            <Download className="w-4 h-4 text-foreground dark:text-gray-200" />
+            className="h-10 w-10 rounded-full hover:bg-white/20 flex items-center justify-center flex-shrink-0 transition-colors">
+            <Download className="w-4 h-4 text-foreground dark:text-gray-200 opacity-60" />
           </a>
         )}
 
         <div className="flex-1" />
 
-        {/* AI FAB */}
+        {/* AI FAB - Prominent with glow */}
         <button
           onClick={() => setIsAIOpen(true)}
-          className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md hover:scale-105 active:scale-95 transition-all flex items-center justify-center flex-shrink-0"
+          className="group relative h-10 px-4 rounded-full bg-indigo-600 text-white shadow-lg hover:shadow-indigo-500/40 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center gap-2 overflow-hidden"
           aria-label="Open AI Assistant"
         >
-          <Sparkles className="w-4 h-4" />
+          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <Sparkles className="w-4 h-4 relative z-10" />
+          <span className="relative z-10 text-[10px] font-black uppercase tracking-widest hidden md:inline">AI Assistant</span>
         </button>
       </div>
 

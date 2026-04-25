@@ -30,6 +30,7 @@ export interface Resource {
   allow_download: boolean;
   cover_emoji: string | null;
   cover_color: string | null;
+  grade_level: string | null;
   created_at: string;
 }
 
