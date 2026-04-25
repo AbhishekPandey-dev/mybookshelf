@@ -13,12 +13,22 @@ export default function AIAssistant({
   pdfText,
   currentPage,
   pageTexts,
+  open,
+  onOpenChange,
 }: {
   pdfText: string;
   currentPage: number;
   pageTexts: Record<number, string>;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = open !== undefined ? open : internalOpen;
+  const handleOpenChange = (v: boolean) => {
+    if (onOpenChange) onOpenChange(v);
+    else setInternalOpen(v);
+  };
+
   const [tab, setTab] = useState("ask");
   const [lang, setLang] = useState<Lang>("en");
 
@@ -178,9 +188,9 @@ export default function AIAssistant({
 
   return (
     <>
-      {!open && (
+      {!isOpen && (
         <button
-          onClick={() => setOpen(true)}
+          onClick={() => handleOpenChange(true)}
           className="fixed bottom-6 right-6 z-40 w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-primary text-primary-foreground shadow-pop hover:scale-110 active:scale-95 transition-all flex items-center justify-center"
           aria-label="Open AI Assistant"
         >
@@ -188,12 +198,12 @@ export default function AIAssistant({
         </button>
       )}
 
-      {open && (
+      {isOpen && (
         <>
           {/* Backdrop on mobile */}
           <div
             className="fixed inset-0 z-40 bg-black/30 sm:bg-transparent sm:pointer-events-none animate-fade-in-fast"
-            onClick={() => setOpen(false)}
+            onClick={() => handleOpenChange(false)}
           />
 
           {/* Panel: bottom-sheet on mobile, right-slide on desktop */}
@@ -210,7 +220,7 @@ export default function AIAssistant({
                 </div>
                 <h3 className="font-heading font-semibold text-foreground">AI Assistant</h3>
               </div>
-              <button onClick={() => setOpen(false)} className="w-10 h-10 rounded-full hover:bg-muted flex items-center justify-center" aria-label="Close">
+              <button onClick={() => handleOpenChange(false)} className="w-10 h-10 rounded-full hover:bg-muted flex items-center justify-center" aria-label="Close">
                 <X className="w-5 h-5" />
               </button>
             </div>

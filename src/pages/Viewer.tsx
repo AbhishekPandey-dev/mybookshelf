@@ -23,8 +23,10 @@ export default function Viewer() {
   const [scale, setScale] = useState(1.1);
   const [width, setWidth] = useState<number>(800);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [pdfDoc, setPdfDoc] = useState<any>(null);
   const [pdfText, setPdfText] = useState("");
   const [pageTexts, setPageTexts] = useState<Record<number, string>>({});
+  const [isAIOpen, setIsAIOpen] = useState(false);
 
   // Toolbar auto-hide
   const [toolbarVisible, setToolbarVisible] = useState(true);
@@ -56,22 +58,26 @@ export default function Viewer() {
     return () => window.removeEventListener("resize", onResize);
   }, [resource]);
 
-  const onLoaded = async (pdf: any) => {
+  const onLoaded = (pdf: any) => {
     setNumPages(pdf.numPages);
-    let all = "";
-    const map: Record<number, string> = {};
-    for (let i = 1; i <= Math.min(pdf.numPages, 100); i++) {
+    setPdfDoc(pdf);
+  };
+
+  useEffect(() => {
+    const extractCurrentPageText = async () => {
+      if (!isAIOpen || !pdfDoc || pageTexts[page]) return;
       try {
-        const p = await pdf.getPage(i);
+        const p = await pdfDoc.getPage(page);
         const tc = await p.getTextContent();
         const txt = tc.items.map((it: any) => it.str).join(" ");
-        map[i] = txt;
-        all += `\n--- Page ${i} ---\n${txt}`;
-      } catch {}
-    }
-    setPdfText(all);
-    setPageTexts(map);
-  };
+        setPageTexts((prev) => ({ ...prev, [page]: txt }));
+        setPdfText((prev) => prev + `\n--- Page ${page} ---\n${txt}`);
+      } catch (err) {
+        console.error("Text extraction failed", err);
+      }
+    };
+    extractCurrentPageText();
+  }, [isAIOpen, page, pdfDoc, pageTexts]);
 
   const fullscreen = () => {
     const el = document.documentElement;
@@ -153,7 +159,7 @@ export default function Viewer() {
         </div>
       </div>
 
-      <AIAssistant pdfText={pdfText} currentPage={page} pageTexts={pageTexts} />
+      <AIAssistant pdfText={pdfText} currentPage={page} pageTexts={pageTexts} open={isAIOpen} onOpenChange={setIsAIOpen} />
     </div>
   );
 }
