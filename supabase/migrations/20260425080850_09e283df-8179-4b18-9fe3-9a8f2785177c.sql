@@ -1,1 +1,0 @@
-ALTER TABLE public.teacher_settings ADD COLUMN IF NOT EXISTS teacher_name TEXT;
