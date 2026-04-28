@@ -157,11 +157,6 @@ export default function Index() {
         )}
       </main>
 
-      <footer className="border-t border-border py-8">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          {settings.site_name} · Made for students <span className="text-destructive">❤️</span>
-        </div>
-      </footer>
     </div>
   );
 }
