@@ -6,11 +6,15 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getColor } from "@/lib/colorMap";
 import { Search, BookOpen, X } from "lucide-react";
+import { Header } from "@/components/Header";
+import { useVibration } from "@/hooks/useVibration";
+
 
 type Subject = { id: string; name: string; icon: string; color: string };
 type Settings = { site_name: string; tagline: string };
 
 export default function Index() {
+  const { vibrateLight } = useVibration();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [settings, setSettings] = useState<Settings>({ site_name: "MyBookshelf", tagline: "Learn anywhere, anytime." });
@@ -51,21 +55,8 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col animate-fade-in-fast">
-      {/* Sticky minimal navbar */}
-      <header className="sticky top-0 z-30 bg-background/80 backdrop-blur border-b border-border">
-        <div className="container mx-auto h-16 flex items-center justify-between px-4">
-          <Link to="/" className="font-heading font-bold text-xl text-foreground">
-            {settings.site_name}
-          </Link>
-          <button
-            onClick={() => setSearchOpen(true)}
-            className="w-12 h-12 rounded-full hover:bg-muted flex items-center justify-center press"
-            aria-label="Search"
-          >
-            <Search className="w-5 h-5 text-foreground" />
-          </button>
-        </div>
-      </header>
+      <Header siteName={settings.site_name} onSearchClick={() => setSearchOpen(true)} />
+
 
       {/* Search overlay */}
       {searchOpen && (
@@ -138,7 +129,14 @@ export default function Index() {
               const color = getColor(s.color);
               const count = counts[s.id] ?? 0;
               return (
-                <Link key={s.id} to={`/subject/${s.id}`} style={{ animationDelay: `${idx * 40}ms` }} className="animate-fade-in">
+                <Link 
+                  key={s.id} 
+                  to={`/subject/${s.id}`} 
+                  style={{ animationDelay: `${idx * 40}ms` }} 
+                  className="animate-fade-in"
+                  onClick={() => vibrateLight()}
+                >
+
                   <Card className="lift-card cursor-pointer h-full overflow-hidden p-0 border border-border">
                     {/* colored top strip */}
                     <div className={`h-2 w-full ${color.bg}`} />

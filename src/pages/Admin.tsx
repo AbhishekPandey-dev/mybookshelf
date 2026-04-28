@@ -17,6 +17,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { colorOptions, getColor } from "@/lib/colorMap";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { useVibration } from "@/hooks/useVibration";
+
 
 const EMOJI_OPTIONS = ["📚","📖","📕","📗","📘","📙","🧪","🔬","🧮","🌍","🎨","🎵","💻","⚛️","📐","🧠","✏️","🔭","🌱","⚙️"];
 
@@ -24,8 +27,10 @@ type Tab = "content" | "upload" | "settings";
 
 export default function Admin() {
   const { user, isTeacher, loading, signOut } = useAuth();
+  const { vibrateLight } = useVibration();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("content");
+
 
   const [subjects, setSubjects] = useState<any[]>([]);
   const [resources, setResources] = useState<any[]>([]);
@@ -70,24 +75,27 @@ export default function Admin() {
           {navItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setTab(item.id)}
+              onClick={() => { vibrateLight(); setTab(item.id); }}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-button text-sm font-medium transition-smooth press ${
                 tab === item.id ? "bg-primary-soft text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
+
               <item.icon className="w-5 h-5" />
               {item.label}
             </button>
           ))}
         </nav>
-        <div className="p-3 border-t border-border">
+        <div className="p-3 border-t border-border flex items-center gap-1">
           <button
-            onClick={() => signOut().then(() => navigate("/"))}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-button text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-smooth press"
+            onClick={() => { vibrateLight(); signOut().then(() => navigate("/")); }}
+            className="flex-1 flex items-center gap-3 px-4 py-3 rounded-button text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-smooth press"
           >
             <LogOut className="w-5 h-5" /> Sign Out
           </button>
+          <ThemeToggle />
         </div>
+
       </aside>
 
       {/* Main */}
@@ -100,9 +108,13 @@ export default function Admin() {
             </div>
             <span className="font-heading font-bold">{settings?.site_name || "MyBookshelf"}</span>
           </Link>
-          <button onClick={() => signOut().then(() => navigate("/"))} className="w-11 h-11 rounded-full hover:bg-muted flex items-center justify-center">
-            <LogOut className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            <button onClick={() => { vibrateLight(); signOut().then(() => navigate("/")); }} className="w-11 h-11 rounded-full hover:bg-muted flex items-center justify-center">
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
+
         </header>
 
         <main className="flex-1 container mx-auto px-4 md:px-8 py-8 max-w-5xl w-full">
@@ -116,11 +128,12 @@ export default function Admin() {
           {navItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => setTab(item.id)}
+              onClick={() => { vibrateLight(); setTab(item.id); }}
               className={`flex-1 flex flex-col items-center justify-center gap-0.5 text-xs font-medium press ${
                 tab === item.id ? "text-primary" : "text-muted-foreground"
               }`}
             >
+
               <item.icon className="w-5 h-5" />
               {item.label}
             </button>

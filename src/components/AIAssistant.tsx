@@ -9,6 +9,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useVibration } from "@/hooks/useVibration";
+
 
 type Lang = "en" | "hi";
 type Msg = { role: "user" | "assistant"; content: string; lang: Lang; streaming?: boolean };
@@ -59,7 +61,9 @@ export default function AIAssistant({
   currentPage: number;
   pageTexts: Record<number, string>;
 }) {
+  const { vibrateLight, vibrateMedium, vibrateSuccess } = useVibration();
   const [open, setOpen] = useState(false);
+
   const [tab, setTab] = useState("ask");
   const [lang, setLang] = useState<Lang>("hi");
 
@@ -471,7 +475,7 @@ export default function AIAssistant({
                 <div className="flex items-center gap-1.5 shrink-0">
                   <LangToggle />
                   <button
-                    onClick={() => setOpen(false)}
+                    onClick={() => { vibrateLight(); setOpen(false); }}
                     className="w-10 h-10 rounded-full hover:bg-muted flex items-center justify-center transition-colors active:scale-95"
                     aria-label="Close"
                   >

@@ -12,6 +12,9 @@ import {
 } from "lucide-react";
 import AIAssistant from "@/components/AIAssistant";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { useVibration } from "@/hooks/useVibration";
+
 
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -39,7 +42,9 @@ export default function Viewer() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [searchHits, setSearchHits] = useState<{ page: number; snippet: string }[]>([]);
+  const { vibrateLight, vibrateMedium } = useVibration();
   const [activeHit, setActiveHit] = useState(0);
+
 
   const showToolbar = useCallback(() => {
     setToolbarVisible(true);
@@ -200,10 +205,20 @@ export default function Viewer() {
               <Search className="w-5 h-5" />
             </button>
             {resource.allow_download && (
-              <a href={resource.pdf_url} download target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full hover:bg-muted flex items-center justify-center press" aria-label="Download">
+              <a 
+                href={resource.pdf_url} 
+                download 
+                target="_blank" 
+                rel="noreferrer" 
+                className="w-10 h-10 rounded-full hover:bg-muted flex items-center justify-center press" 
+                aria-label="Download"
+                onClick={() => vibrateLight()}
+              >
                 <Download className="w-5 h-5 text-foreground" />
               </a>
             )}
+            <ThemeToggle />
+
           </div>
 
           {/* Search bar */}
@@ -306,13 +321,14 @@ export default function Viewer() {
             {currentPage} / {numPages || "—"}
           </div>
           <div className="w-px h-6 bg-border mx-1" />
-          <Button size="icon" variant="ghost" className="rounded-full h-10 w-10" onClick={() => setScale((s) => Math.max(0.6, +(s - 0.2).toFixed(2)))}>
+          <Button size="icon" variant="ghost" className="rounded-full h-10 w-10" onClick={() => { vibrateLight(); setScale((s) => Math.max(0.6, +(s - 0.2).toFixed(2))); }}>
             <ZoomOut className="w-4 h-4" />
           </Button>
           <span className="text-xs text-muted-foreground w-10 text-center tabular-nums">{Math.round(scale * 100)}%</span>
-          <Button size="icon" variant="ghost" className="rounded-full h-10 w-10" onClick={() => setScale((s) => Math.min(2.5, +(s + 0.2).toFixed(2)))}>
+          <Button size="icon" variant="ghost" className="rounded-full h-10 w-10" onClick={() => { vibrateLight(); setScale((s) => Math.min(2.5, +(s + 0.2).toFixed(2))); }}>
             <ZoomIn className="w-4 h-4" />
           </Button>
+
           <div className="w-px h-6 bg-border mx-1" />
           <Button size="icon" variant="ghost" className="rounded-full h-10 w-10" onClick={fullscreen}>
             <Maximize className="w-4 h-4" />

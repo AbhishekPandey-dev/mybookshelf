@@ -4,7 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, FileText, ChevronRight, BookOpen } from "lucide-react";
+import { useVibration } from "@/hooks/useVibration";
+import { ArrowLeft, FileText, ChevronRight, BookOpen, Search } from "lucide-react";
+import { Header } from "@/components/Header";
+
+
 
 type Subject = { id: string; name: string; icon: string; color: string };
 type Book = { id: string; title: string; description: string | null; order_index: number };
@@ -40,16 +44,32 @@ export default function Subject() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background animate-fade-in-fast">
-        <div className="container mx-auto px-4 py-8 max-w-3xl">
-          <Skeleton className="h-6 w-24 mb-6" />
-          <Skeleton className="h-10 w-64 mb-8" />
-          <div className="space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-card" />)}
+        <header className="h-16 border-b border-border bg-background/80 backdrop-blur sticky top-0 z-20">
+          <div className="container mx-auto h-full px-4 flex items-center gap-3 max-w-3xl">
+            <Skeleton className="w-10 h-10 rounded-full" />
+            <Skeleton className="h-6 w-32" />
+          </div>
+        </header>
+        <div className="container mx-auto px-4 py-8 max-w-3xl space-y-10">
+          <div className="space-y-4">
+            <Skeleton className="h-6 w-24" />
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Card key={i} className="p-5 flex items-center gap-4">
+                  <Skeleton className="w-12 h-12 rounded-input" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                </Card>
+              ))}
+            </div>
           </div>
         </div>
       </div>
     );
   }
+
   if (!subject) {
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Subject not found</div>;
   }
@@ -60,20 +80,8 @@ export default function Subject() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col animate-fade-in-fast">
-      {/* Header */}
-      <header className="sticky top-0 z-20 bg-background/80 backdrop-blur border-b border-border">
-        <div className="container mx-auto h-16 px-4 flex items-center gap-3 max-w-3xl">
-          <button
-            onClick={() => navigate("/")}
-            className="w-12 h-12 -ml-2 rounded-full hover:bg-muted flex items-center justify-center press"
-            aria-label="Back"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <span className="text-2xl">{subject.icon}</span>
-          <h1 className="font-heading font-bold text-xl md:text-2xl text-foreground truncate">{subject.name}</h1>
-        </div>
-      </header>
+      <Header siteName={subject.name} onSearchClick={() => navigate("/")} />
+
 
       <main className="container mx-auto px-4 py-8 max-w-3xl flex-1 space-y-10">
         {fullBooks.length > 0 && (
@@ -125,9 +133,11 @@ export default function Subject() {
 }
 
 function UnitRow({ r, index }: { r: Resource; index?: number }) {
+  const { vibrateLight } = useVibration();
   const label = r.unit_number || (index ? `Unit ${index}` : (r.content_type === "full" ? "Book" : "Item"));
   return (
-    <Link to={`/read/${r.id}`} className="block group">
+    <Link to={`/read/${r.id}`} className="block group" onClick={() => vibrateLight()}>
+
       <Card className="lift-card p-4 sm:p-5 flex items-center gap-4 cursor-pointer">
         <div className="flex-shrink-0 w-12 h-12 rounded-input bg-primary-soft text-primary flex items-center justify-center font-heading font-bold text-sm px-2 text-center">
           {label.length > 8 ? r.cover_emoji || "📄" : label}

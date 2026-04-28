@@ -12,20 +12,38 @@
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://mybookshelf.example.com/" />
-    <meta property="og:title" content="MyBookshelf | Resource Sharing & Document Portal" />
-    <meta property="og:description" content="A premium resource-sharing platform with a secure admin panel and public document reading portal." />
+    <meta property="og:url" content="https://mybookshelf-edu.vercel.app/" />
+    <meta property="og:title" content="MyBookshelf | Premium Educational Resource Portal" />
+    <meta property="og:description" content="A premium resource-sharing platform with a secure admin panel and high-end PDF exploration tools for teachers and students." />
+    <meta property="og:image" content="/og-image.png" />
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content="https://mybookshelf.example.com/" />
-    <meta name="twitter:title" content="MyBookshelf | Resource Sharing & Document Portal" />
-    <meta name="twitter:description" content="A premium resource-sharing platform with a secure admin panel and public document reading portal." />
-    <meta name="twitter:site" content="@Lovable" />
+    <meta name="twitter:url" content="https://mybookshelf-edu.vercel.app/" />
+    <meta name="twitter:title" content="MyBookshelf | Premium Educational Resource Portal" />
+    <meta name="twitter:description" content="A premium resource-sharing platform with a secure admin panel and high-end PDF exploration tools." />
+    <meta name="twitter:image" content="/og-image.png" />
+
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Bookshelf" />
+    <link rel="apple-touch-icon" href="/favicon.ico" />
     <meta name="robots" content="index, follow" />
+    <script>
+      (function() {
+        try {
+          const theme = localStorage.getItem('theme');
+          const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          if (theme === 'dark' || (!theme && supportDarkMode)) {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
 </head>
 
   <body>
