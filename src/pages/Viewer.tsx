@@ -401,7 +401,7 @@ export default function Viewer() {
             
             <button
               onClick={() => { setSidebarOpen(!sidebarOpen); vibrateLight(); }}
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-90 ${sidebarOpen ? "bg-primary/10 text-primary" : "hover:bg-muted text-foreground"}`}
+              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-90 z-[70] ${sidebarOpen ? "bg-primary text-primary-foreground shadow-lg" : "hover:bg-muted text-foreground"}`}
               aria-label="Thumbnails"
             >
               <LayoutPanelLeft className="w-5 h-5" />
@@ -495,7 +495,7 @@ export default function Viewer() {
       <div className="flex-1 flex overflow-hidden pt-14 sm:pt-16">
         {/* Thumbnails Sidebar */}
         <div 
-          className={`fixed inset-y-0 left-0 h-full w-[280px] bg-background/95 backdrop-blur-2xl border-r border-border/50 transition-transform duration-500 ease-in-out flex flex-col z-[60] shadow-2xl ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
+          className={`fixed inset-y-0 left-0 h-full w-[280px] bg-background/95 backdrop-blur-2xl border-r border-border/50 transition-all duration-500 ease-in-out flex flex-col z-[80] ${sidebarOpen ? "translate-x-0 opacity-100 shadow-2xl visible" : "-translate-x-full opacity-0 shadow-none invisible"}`}
         >
           <div className="p-4 border-b border-border/50 flex items-center justify-between bg-muted/30">
             <div className="flex items-center gap-2">
@@ -522,7 +522,7 @@ export default function Viewer() {
         {/* Sidebar Overlay for Mobile */}
         {sidebarOpen && (
           <div 
-            className="fixed inset-0 bg-background/40 backdrop-blur-[2px] z-50 animate-in fade-in duration-300 lg:hidden"
+            className="fixed inset-0 bg-background/40 backdrop-blur-[2px] z-[75] animate-in fade-in duration-300 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}

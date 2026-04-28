@@ -149,6 +149,7 @@ export default function Admin() {
    ============================================================ */
 function ContentTab({ subjects, resources, settings, onChange }: any) {
   const [editing, setEditing] = useState<any>(null);
+  const [editingSubject, setEditingSubject] = useState<any>(null);
 
   const stats = useMemo(() => {
     const lastUpload = resources.reduce((acc: any, r: any) => {
@@ -169,6 +170,41 @@ function ContentTab({ subjects, resources, settings, onChange }: any) {
     if (r.pdf_path) await supabase.storage.from("pdfs").remove([r.pdf_path]);
     const { error } = await supabase.from("resources").delete().eq("id", r.id);
     if (error) toast.error(error.message); else { toast.success("Deleted"); onChange(); }
+  };
+
+  const moveSubject = async (s: any, dir: -1 | 1) => {
+    const idx = subjects.findIndex((x: any) => x.id === s.id);
+    const swap = subjects[idx + dir];
+    if (!swap) return;
+    await supabase.from("subjects").update({ order_index: swap.order_index }).eq("id", s.id);
+    await supabase.from("subjects").update({ order_index: s.order_index }).eq("id", swap.id);
+    onChange();
+  };
+
+  const deleteSubject = async (s: any) => {
+    const items = resources.filter((r: any) => r.subject_id === s.id);
+    const count = items.length;
+    const msg = count > 0 
+      ? `Delete subject "${s.name}" and all ${count} PDFs inside it? This cannot be undone.` 
+      : `Delete subject "${s.name}"?`;
+      
+    if (!confirm(msg)) return;
+    
+    // 1. Delete files from storage
+    const paths = items.map((r: any) => r.pdf_path).filter(Boolean);
+    if (paths.length > 0) {
+      await supabase.storage.from("pdfs").remove(paths);
+    }
+    
+    // 2. Delete the subject (cascades to resources table)
+    const { error } = await supabase.from("subjects").delete().eq("id", s.id);
+    
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Subject deleted");
+      onChange();
+    }
   };
 
   const move = async (r: any, dir: -1 | 1) => {
@@ -192,9 +228,16 @@ function ContentTab({ subjects, resources, settings, onChange }: any) {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="font-heading font-bold text-3xl text-foreground mb-1">Dashboard</h1>
-        <p className="text-muted-foreground text-sm">Manage your subjects and uploaded PDFs.</p>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="font-heading font-bold text-3xl text-foreground mb-1">Dashboard</h1>
+          <p className="text-muted-foreground text-sm">Manage your subjects and uploaded PDFs.</p>
+        </div>
+        <Button onClick={() => setEditingSubject({ name: "", icon: "📚", color: "indigo" })} className="shrink-0">
+          <Plus className="w-4 h-4 mr-1.5" />
+          <span className="hidden sm:inline">New Subject</span>
+          <span className="sm:hidden">Subject</span>
+        </Button>
       </div>
 
       {/* Stats */}
@@ -220,14 +263,30 @@ function ContentTab({ subjects, resources, settings, onChange }: any) {
               return (
                 <AccordionItem key={s.id} value={s.id} className="border-0">
                   <Card className="overflow-hidden p-0">
-                    <AccordionTrigger className="hover:no-underline px-5 py-4 [&[data-state=open]]:border-b [&[data-state=open]]:border-border">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className={`w-10 h-10 rounded-input ${color.bg} flex items-center justify-center text-xl flex-shrink-0`}>
-                          {s.icon}
+                    <AccordionTrigger className="hover:no-underline px-5 py-4 [&[data-state=open]]:border-b [&[data-state=open]]:border-border group">
+                      <div className="flex items-center justify-between w-full pr-4">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`w-10 h-10 rounded-input ${color.bg} flex items-center justify-center text-xl flex-shrink-0`}>
+                            {s.icon}
+                          </div>
+                          <div className="text-left min-w-0">
+                            <div className="font-heading font-semibold text-foreground truncate">{s.name}</div>
+                            <div className="text-xs text-muted-foreground">{items.length} PDF{items.length === 1 ? "" : "s"}</div>
+                          </div>
                         </div>
-                        <div className="text-left flex-1 min-w-0">
-                          <div className="font-heading font-semibold text-foreground truncate">{s.name}</div>
-                          <div className="text-xs text-muted-foreground">{items.length} PDF{items.length === 1 ? "" : "s"}</div>
+                        <div className="flex items-center gap-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-muted" onClick={() => moveSubject(s, -1)} disabled={subjects.indexOf(s) === 0}>
+                            <ChevronUp className="w-4 h-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-muted" onClick={() => moveSubject(s, 1)} disabled={subjects.indexOf(s) === subjects.length - 1}>
+                            <ChevronDown className="w-4 h-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-muted" onClick={() => setEditingSubject(s)}>
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => deleteSubject(s)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
                       </div>
                     </AccordionTrigger>
@@ -274,6 +333,14 @@ function ContentTab({ subjects, resources, settings, onChange }: any) {
           subjects={subjects}
           onClose={() => setEditing(null)}
           onSaved={() => { setEditing(null); onChange(); }}
+        />
+      )}
+
+      {editingSubject && (
+        <EditSubjectDialog
+          subject={editingSubject}
+          onClose={() => setEditingSubject(null)}
+          onSaved={() => { setEditingSubject(null); onChange(); }}
         />
       )}
     </div>
@@ -567,8 +634,10 @@ function UploadTab({ subjects, onDone }: { subjects: any[]; onDone: () => void }
    ============================================================ */
 function EditResourceDialog({ resource, subjects, onClose, onSaved }: any) {
   const [form, setForm] = useState({ ...resource });
+  const [busy, setBusy] = useState(false);
 
   const save = async () => {
+    setBusy(true);
     const { error } = await supabase.from("resources").update({
       title: form.title,
       description: form.description || null,
@@ -578,14 +647,15 @@ function EditResourceDialog({ resource, subjects, onClose, onSaved }: any) {
       cover_emoji: form.cover_emoji || "📄",
       allow_download: form.allow_download,
     }).eq("id", form.id);
+    setBusy(false);
     if (error) toast.error(error.message); else { toast.success("Saved"); onSaved(); }
   };
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="max-w-md">
         <DialogHeader><DialogTitle className="font-heading">Edit Resource</DialogTitle></DialogHeader>
-        <div className="space-y-4">
+        <div className="space-y-4 py-2">
           <div className="space-y-1.5">
             <Label>Title</Label>
             <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
@@ -621,13 +691,89 @@ function EditResourceDialog({ resource, subjects, onClose, onSaved }: any) {
             <Textarea rows={2} value={form.description || ""} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </div>
           <div className="flex items-center justify-between py-1">
-            <Label className="cursor-pointer">Allow download</Label>
+            <Label className="cursor-pointer font-medium">Allow download</Label>
             <Switch checked={form.allow_download} onCheckedChange={(v) => setForm({ ...form, allow_download: v })} />
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={save}>Save Changes</Button>
+          <Button onClick={save} disabled={busy}>{busy ? "Saving..." : "Save Changes"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditSubjectDialog({ subject, onClose, onSaved }: { subject: any; onClose: () => void; onSaved: () => void }) {
+  const [form, setForm] = useState({ ...subject });
+  const [busy, setBusy] = useState(false);
+
+  const save = async () => {
+    if (!form.name.trim()) { toast.error("Name is required"); return; }
+    setBusy(true);
+    
+    let error;
+    if (form.id) {
+      const { error: err } = await supabase.from("subjects").update({
+        name: form.name.trim(),
+        icon: form.icon,
+        color: form.color,
+      }).eq("id", form.id);
+      error = err;
+    } else {
+      const { error: err } = await supabase.from("subjects").insert({
+        name: form.name.trim(),
+        icon: form.icon,
+        color: form.color,
+        order_index: 0, // Simplified, refresh will sort it anyway
+      });
+      error = err;
+    }
+
+    setBusy(false);
+    if (error) toast.error(error.message); else { toast.success(form.id ? "Subject updated" : "Subject created"); onSaved(); }
+  };
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle className="font-heading">{form.id ? "Edit Subject" : "New Subject"}</DialogTitle></DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-1.5">
+            <Label>Name</Label>
+            <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Icon</Label>
+            <div className="flex flex-wrap gap-2">
+              {EMOJI_OPTIONS.map((e) => (
+                <button
+                  key={e}
+                  type="button"
+                  onClick={() => setForm({ ...form, icon: e })}
+                  className={`w-10 h-10 rounded-input text-xl transition-smooth press ${form.icon === e ? "bg-primary-soft ring-2 ring-primary" : "bg-muted hover:bg-muted/70"}`}
+                >{e}</button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Color</Label>
+            <div className="flex flex-wrap gap-2">
+              {colorOptions.map((c) => (
+                <button
+                  key={c.name}
+                  type="button"
+                  onClick={() => setForm({ ...form, color: c.name })}
+                  className={`w-9 h-9 rounded-full ${c.bg} transition-smooth press ${form.color === c.name ? "ring-2 ring-offset-2 ring-foreground scale-110" : ""}`}
+                  aria-label={c.name}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button onClick={save} disabled={busy}>{busy ? "Saving..." : "Save Changes"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
