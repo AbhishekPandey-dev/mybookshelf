@@ -339,10 +339,13 @@ function ContentTab({ subjects, resources, settings, onChange }: any) {
       {editingSubject && (
         <EditSubjectDialog
           subject={editingSubject}
+          resources={resources}
+          onDelete={deleteSubject}
           onClose={() => setEditingSubject(null)}
           onSaved={() => { setEditingSubject(null); onChange(); }}
         />
       )}
+
     </div>
   );
 }
@@ -704,7 +707,13 @@ function EditResourceDialog({ resource, subjects, onClose, onSaved }: any) {
   );
 }
 
-function EditSubjectDialog({ subject, onClose, onSaved }: { subject: any; onClose: () => void; onSaved: () => void }) {
+function EditSubjectDialog({ subject, resources, onDelete, onClose, onSaved }: { 
+  subject: any; 
+  resources: any[];
+  onDelete: (s: any) => Promise<void>;
+  onClose: () => void; 
+  onSaved: () => void;
+}) {
   const [form, setForm] = useState({ ...subject });
   const [busy, setBusy] = useState(false);
 
@@ -771,10 +780,19 @@ function EditSubjectDialog({ subject, onClose, onSaved }: { subject: any; onClos
             </div>
           </div>
         </div>
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={save} disabled={busy}>{busy ? "Saving..." : "Save Changes"}</Button>
+        <DialogFooter className="flex flex-row items-center justify-between gap-2 sm:gap-0">
+          {subject.id && (
+            <Button variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => { onDelete(subject); onClose(); }}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
+            </Button>
+          )}
+          <div className="flex items-center gap-2 ml-auto">
+            <Button variant="ghost" onClick={onClose}>Cancel</Button>
+            <Button onClick={save} disabled={busy}>{busy ? "Saving..." : "Save Changes"}</Button>
+          </div>
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );
