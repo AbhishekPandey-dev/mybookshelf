@@ -1,7 +1,9 @@
 {
   "name": "mybookshelf",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "A premium resource-sharing platform with a secure admin panel and public document reading portal.",
+  "author": "Abhishek Pandey",
   "type": "module",
   "scripts": {
     "dev": "vite",
