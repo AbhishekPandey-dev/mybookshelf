@@ -57,7 +57,7 @@ export default function Auth() {
           <div className="w-12 h-12 rounded-card bg-gradient-primary flex items-center justify-center">
             <GraduationCap className="w-6 h-6 text-primary-foreground" />
           </div>
-          <span className="font-heading font-bold text-2xl text-foreground">EduShelf</span>
+          <span className="font-heading font-bold text-2xl text-foreground">MyBookshelf</span>
         </Link>
         <h1 className="font-heading font-bold text-2xl text-center mb-1 text-foreground">
           {needsSignup ? "First-time Setup" : "Teacher Login"}

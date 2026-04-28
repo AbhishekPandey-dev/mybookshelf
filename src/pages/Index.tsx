@@ -13,7 +13,7 @@ type Settings = { site_name: string; tagline: string };
 export default function Index() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
-  const [settings, setSettings] = useState<Settings>({ site_name: "EduShelf", tagline: "Learn anywhere, anytime." });
+  const [settings, setSettings] = useState<Settings>({ site_name: "MyBookshelf", tagline: "Learn anywhere, anytime." });
   const [loading, setLoading] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -30,7 +30,7 @@ export default function Index() {
       const c: Record<string, number> = {};
       (res ?? []).forEach((r: any) => { c[r.subject_id] = (c[r.subject_id] ?? 0) + 1; });
       setCounts(c);
-      if (s) setSettings({ site_name: s.site_name || "EduShelf", tagline: s.tagline || "Learn anywhere, anytime." });
+      if (s) setSettings({ site_name: s.site_name || "MyBookshelf", tagline: s.tagline || "Learn anywhere, anytime." });
       setLoading(false);
     })();
   }, []);

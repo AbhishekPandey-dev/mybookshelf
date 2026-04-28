@@ -64,7 +64,7 @@ export default function Admin() {
           <div className="w-9 h-9 rounded-card bg-gradient-primary flex items-center justify-center">
             <GraduationCap className="w-5 h-5 text-primary-foreground" />
           </div>
-          <span className="font-heading font-bold text-foreground">{settings?.site_name || "EduShelf"}</span>
+          <span className="font-heading font-bold text-foreground">{settings?.site_name || "MyBookshelf"}</span>
         </Link>
         <nav className="flex-1 p-3 space-y-1">
           {navItems.map((item) => (
@@ -98,7 +98,7 @@ export default function Admin() {
             <div className="w-9 h-9 rounded-card bg-gradient-primary flex items-center justify-center">
               <GraduationCap className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="font-heading font-bold">{settings?.site_name || "EduShelf"}</span>
+            <span className="font-heading font-bold">{settings?.site_name || "MyBookshelf"}</span>
           </Link>
           <button onClick={() => signOut().then(() => navigate("/"))} className="w-11 h-11 rounded-full hover:bg-muted flex items-center justify-center">
             <LogOut className="w-5 h-5" />
@@ -670,7 +670,7 @@ function SettingsTab({ settings, onChange }: any) {
       <Card className="p-6 space-y-5">
         <div className="space-y-1.5">
           <Label>Site Name</Label>
-          <Input value={form.site_name} onChange={(e) => setForm({ ...form, site_name: e.target.value })} placeholder="EduShelf" />
+          <Input value={form.site_name} onChange={(e) => setForm({ ...form, site_name: e.target.value })} placeholder="MyBookshelf" />
         </div>
         <div className="space-y-1.5">
           <Label>Tagline</Label>
